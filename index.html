@@ -1,0 +1,1655 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mancala Awelé</title>
+<meta name="description" content="Mancala Awelé online: crie uma partida, mostre o QR Code e jogue com um colega, cada um no seu celular.">
+<meta name="theme-color" content="#151b35">
+<meta property="og:title" content="Mancala Awelé">
+<meta property="og:description" content="O jogo africano de semear e colher. Crie uma partida e jogue com um colega, cada um no seu celular.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%236e3f22'/%3E%3Ccircle cx='32' cy='32' r='21' fill='%232d160b'/%3E%3Ccircle cx='26' cy='28' r='6' fill='%23a9afa5'/%3E%3Ccircle cx='38' cy='30' r='6' fill='%23979f98'/%3E%3Ccircle cx='31' cy='40' r='6' fill='%23b8b6a7'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=DM+Mono:wght@400;500&family=Tilt+Warp&display=swap">
+<style>
+:root{
+  /* Layout: tela inicial com o título grande e um tabuleiro de enfeite; no jogo, o tabuleiro de madeira entalhada sobre pano índigo baoulê, status logo abaixo e súmula ao lado em telas largas */
+  --cloth:#151b35;
+  --cloth-2:#1c2446;
+  --cloth-3:#27325e;
+  --thread:rgba(205,214,255,.045);
+  --line:rgba(205,214,255,.14);
+  --ink:#edf0fa;
+  --ink-2:#b3bbd9;
+  --ink-3:#8a95ba;
+  --wood:#6e3f22;
+  --engrave:rgba(255,232,206,.74);
+  --engrave-2:rgba(255,228,196,.46);
+  --gold:#eab03f;
+  --gold-ink:#1c1405;
+  --gold-glow:rgba(234,176,63,.38);
+  --threat:#f0734f;
+  --ok:#6cc59a;
+  --paper:#f3efe4;
+  --skin:#8a5a3c;
+  --skin-2:#996645;
+  --skin-3:#a8744f;
+  --skin-line:#2a160b;
+  --f-display:"Tilt Warp","Arial Rounded MT Bold","Trebuchet MS",system-ui,sans-serif;
+  --f-body:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-mono:"DM Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{background:var(--cloth);padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);-webkit-text-size-adjust:100%}
+body{
+  margin:0;min-height:100vh;
+  background-color:var(--cloth);
+  background-image:
+    repeating-linear-gradient(0deg,var(--thread) 0 1px,transparent 1px 4px),
+    repeating-linear-gradient(90deg,var(--thread) 0 1px,transparent 1px 5px),
+    radial-gradient(90% 60% at 50% 0%,#243066 0%,rgba(36,48,102,0) 70%);
+  color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;
+}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+/* faixa de tecido no topo: xadrez índigo e branco dos panos baoulê */
+.weave{height:10px;background:conic-gradient(#d9d3c1 25%,#2c3a6e 0 50%,#d9d3c1 0 75%,#2c3a6e 0) 0 0/10px 10px;opacity:.85;box-shadow:0 1px 0 rgba(0,0,0,.45)}
+
+.app{max-width:1260px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 32px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px 16px;flex-wrap:wrap;padding-block:14px}
+.brand{display:flex;flex-direction:column;gap:3px}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3);line-height:1}
+.brand .name{font-family:var(--f-display);font-size:clamp(28px,5.4vw,38px);line-height:1;letter-spacing:.01em}
+body[data-screen="home"] .top .brand{visibility:hidden}
+.top .actions{display:flex;gap:8px;align-items:center;margin-left:auto}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:0 15px;border:1px solid var(--line);border-radius:6px;background:transparent;font-weight:700;font-size:14px;line-height:1;cursor:pointer;transition:background .15s,border-color .15s;text-decoration:none}
+.btn:hover{background:rgba(205,214,255,.06);border-color:rgba(205,214,255,.3)}
+.btn.primary{background:var(--gold);border-color:var(--gold);color:var(--gold-ink)}
+.btn.primary:hover{background:#f1bd55}
+.btn.warn{border-color:var(--threat);color:var(--threat)}
+.btn:disabled{opacity:.42;cursor:not-allowed;background:transparent}
+.icon-btn{width:42px;padding:0}
+.icon-btn svg{width:20px;height:20px}
+.back{align-self:flex-start;padding-left:10px}
+
+/* ---------- tela inicial ---------- */
+.home{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:24px;padding-top:4px}
+.hero-title{font-family:var(--f-display);font-weight:400;font-size:clamp(76px,22vw,136px);line-height:.86;margin:6px 0 0;letter-spacing:-.01em;color:#fff3e2;text-shadow:0 4px 0 rgba(0,0,0,.35)}
+.lede{font-size:17px;color:var(--ink-2);max-width:42ch;margin:14px 0 0;text-wrap:pretty}
+.deco{display:grid;grid-template-columns:1.15fr repeat(6,1fr) 1.15fr;grid-template-rows:repeat(2,auto);gap:clamp(4px,1.2vw,8px);padding:clamp(8px,2.2vw,14px);border-radius:999px;
+  background-color:var(--wood);background-image:linear-gradient(180deg,rgba(255,222,186,.1),rgba(0,0,0,.16) 60%,rgba(0,0,0,.26)),var(--grain,none);background-size:cover;
+  box-shadow:inset 0 2px 0 rgba(255,230,200,.2),inset 0 -8px 14px rgba(0,0,0,.35),0 22px 44px rgba(5,8,20,.55)}
+.deco .dh,.deco .ds{position:relative;background:radial-gradient(circle at 50% 40%,#1f0e07 0%,#2d160b 46%,#43220f 80%,#58301a 100%);box-shadow:inset 0 4px 7px rgba(0,0,0,.72),0 1px 0 rgba(255,226,190,.16)}
+.deco .dh{aspect-ratio:1;border-radius:50%}
+.deco .ds{grid-row:1/span 2;border-radius:999px}
+.deco .seed{width:21%;height:auto;aspect-ratio:1/.86}
+.deco .ds .seed{width:17%}
+.menu{display:grid;gap:10px}
+.choice{display:grid;grid-template-columns:50px minmax(0,1fr);align-items:center;column-gap:14px;text-align:left;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:rgba(28,36,70,.7);cursor:pointer;transition:border-color .15s,background .15s}
+.choice:hover{border-color:rgba(234,176,63,.65);background:rgba(39,50,94,.8)}
+.choice .ic{grid-row:1/span 2;width:50px;height:50px;border-radius:50%;display:grid;place-items:center;font:400 22px/1 var(--f-display);color:var(--engrave);
+  background:radial-gradient(circle at 50% 40%,#1f0e07 0%,#2d160b 46%,#43220f 80%,#6e3f22 100%);box-shadow:inset 0 4px 7px rgba(0,0,0,.72),0 0 0 3px #6e3f22,0 0 0 4px rgba(0,0,0,.3)}
+.choice .ct{font-family:var(--f-display);font-size:23px;line-height:1.1}
+.choice .cd{font-size:13px;line-height:1.35;color:var(--ink-3)}
+.choice.primary{background:var(--gold);border-color:var(--gold);color:var(--gold-ink)}
+.choice.primary:hover{background:#f1bd55}
+.choice.primary .cd{color:rgba(28,20,5,.75)}
+.alt{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.linkish{background:none;border:0;padding:6px 0;color:var(--ink-2);font-weight:700;text-decoration:underline;text-decoration-color:rgba(205,214,255,.35);text-underline-offset:4px;cursor:pointer}
+.linkish:hover{color:var(--ink);text-decoration-color:var(--gold)}
+.home .credit{font-size:12px;color:var(--ink-3);margin:6px 0 0;max-width:60ch}
+
+/* ---------- criar / entrar ---------- */
+.panel{max-width:600px;margin:0 auto;display:flex;flex-direction:column;gap:16px;padding-top:4px}
+.panel h2{font-family:var(--f-display);font-weight:400;font-size:clamp(32px,8vw,44px);line-height:1.02;margin:0;text-wrap:balance}
+.panel p{margin:0;color:var(--ink-2);max-width:52ch;text-wrap:pretty}
+.ticket{display:grid;grid-template-columns:auto minmax(0,1fr);gap:20px;align-items:center;padding:18px;border-radius:14px;background:var(--cloth-2);border:1px solid var(--line)}
+@media (max-width:560px){.ticket{grid-template-columns:minmax(0,1fr);justify-items:center;text-align:center}}
+.qr{width:212px;max-width:100%;aspect-ratio:1;padding:12px;border-radius:10px;background:var(--paper);color:var(--cloth);display:grid;place-items:center;font-size:13px}
+.qr svg{width:100%;height:100%;display:block}
+.code-block{display:flex;flex-direction:column;gap:10px;min-width:0}
+@media (max-width:560px){.code-block{align-items:center}}
+.label{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+.digits{display:flex;gap:8px}
+.digits b{display:grid;place-items:center;width:clamp(48px,13vw,58px);aspect-ratio:1;border-radius:50%;font:400 clamp(26px,7vw,32px)/1 var(--f-display);color:#fff1de;
+  background:radial-gradient(circle at 50% 40%,#1f0e07 0%,#2d160b 50%,#43220f 82%,#6e3f22 100%);box-shadow:inset 0 4px 7px rgba(0,0,0,.72),0 0 0 3px #6e3f22,0 0 0 4px rgba(0,0,0,.3)}
+.link-out{font:400 12px/1.4 var(--f-mono);color:var(--ink-3);word-break:break-all;user-select:all;-webkit-user-select:all}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.net{display:flex;align-items:center;gap:9px;margin:0;font-size:14px;color:var(--ink-2);min-height:22px}
+.net i{width:9px;height:9px;border-radius:50%;background:var(--ink-3);flex:none}
+.net.ok i{background:var(--ok);box-shadow:0 0 0 3px rgba(108,197,154,.22)}
+.net.wait i{background:var(--gold);animation:blink 1.2s ease-in-out infinite}
+.net.bad i{background:var(--threat)}
+.net.bad{color:#ffb7a3}
+@keyframes blink{50%{opacity:.25}}
+.join-form{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch}
+.join-form input{width:min(240px,100%);padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:var(--cloth-2);font:400 34px/1.1 var(--f-display);letter-spacing:.32em;text-align:center;color:#fff1de}
+.join-form input::placeholder{color:rgba(205,214,255,.18)}
+.join-form input:focus{outline:2px solid var(--gold);outline-offset:1px}
+.tip{font-size:14px;padding:12px 14px;border-left:3px solid var(--gold);background:rgba(234,176,63,.07);border-radius:0 8px 8px 0}
+
+/* ---------- tabuleiro ---------- */
+.stage{display:grid;gap:24px;grid-template-columns:minmax(0,1fr)}
+.table{min-width:0}
+.board-wrap{position:relative;display:flex;justify-content:center}
+.board{
+  --hole:90px;
+  --carve:inset 0 calc(var(--hole)*.1) calc(var(--hole)*.15) rgba(0,0,0,.72),inset 0 -2px 2px rgba(255,214,170,.14),0 1px 0 rgba(255,226,190,.16);
+  display:grid;gap:var(--gap,6px);padding:var(--pad,16px);
+  border-radius:calc(var(--hole)*.62);
+  background-color:var(--wood);
+  background-image:linear-gradient(180deg,rgba(255,222,186,.1),rgba(0,0,0,.16) 60%,rgba(0,0,0,.26)),var(--grain,none);
+  background-size:cover;
+  box-shadow:inset 0 2px 0 rgba(255,230,200,.2),inset 0 -10px 18px rgba(0,0,0,.35),inset 0 0 0 1px rgba(0,0,0,.4),0 26px 54px rgba(5,8,20,.6),0 4px 10px rgba(5,8,20,.4);
+  user-select:none;-webkit-user-select:none;touch-action:manipulation;
+}
+.board.h{grid-template-columns:var(--sw) repeat(6,var(--cw)) var(--sw);grid-template-rows:repeat(2,var(--ch))}
+.board.v{grid-template-columns:repeat(2,var(--cw));grid-template-rows:var(--sh) repeat(6,var(--ch)) var(--sh)}
+
+.pit{appearance:none;border:0;background:none;padding:0;margin:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;gap:3px;cursor:default;-webkit-tap-highlight-color:transparent}
+.board.h .pit.near{flex-direction:column-reverse}
+.board.h .pit.far{flex-direction:column}
+.board.v .pit.near{flex-direction:row}
+.board.v .pit.far{flex-direction:row-reverse}
+.pit:focus-visible{outline:none}
+.hole{position:relative;flex:none;width:var(--hole);height:var(--hole);border-radius:50%;
+  background:radial-gradient(circle at 50% 40%,#1f0e07 0%,#2d160b 46%,#43220f 80%,#58301a 100%);
+  box-shadow:var(--carve);transition:box-shadow .18s ease}
+.seeds{position:absolute;inset:0;pointer-events:none}
+.pit .seeds{--sz:calc(var(--hole)*.2*var(--f,1))}
+.num{font:500 11px/1 var(--f-mono);color:var(--engrave-2);min-width:16px;text-align:center;letter-spacing:.03em}
+.cnt{font:500 15px/1 var(--f-mono);color:var(--engrave);text-shadow:0 1px 0 rgba(0,0,0,.6);min-width:24px;min-height:15px;display:flex;flex-direction:column;align-items:center;gap:2px;font-variant-numeric:tabular-nums}
+.cnt .krou{font:700 8px/1 var(--f-body);letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+
+.pit.legal{cursor:pointer}
+.pit.legal .hole{box-shadow:var(--carve),0 0 0 2px rgba(234,176,63,.5)}
+@media (hover:hover){.pit.legal:hover .hole{box-shadow:var(--carve),0 0 0 3px var(--gold),0 0 18px var(--gold-glow)}}
+.pit.legal:focus-visible .hole,.pit.picked .hole{box-shadow:var(--carve),0 0 0 3px var(--gold),0 0 18px var(--gold-glow)}
+.pit.locked .seeds{opacity:.42}
+.pit.threat .hole::after{content:"";position:absolute;inset:-5px;border-radius:50%;border:2px dashed var(--threat);pointer-events:none}
+.pit.land .hole::before{content:"";position:absolute;inset:-4px;border-radius:50%;border:2px dotted var(--engrave);pointer-events:none}
+.pit.wouldcap .hole{box-shadow:var(--carve),0 0 0 3px var(--gold),0 0 16px var(--gold-glow)}
+.pit.harvest .hole{box-shadow:var(--carve),0 0 0 3px var(--gold),0 0 28px rgba(234,176,63,.75)}
+.pit.harvest .seed{filter:brightness(1.35) sepia(.45)}
+
+.seed{position:absolute;width:var(--sz);height:calc(var(--sz)*.86);border-radius:50%;
+  transform:translate(-50%,-50%) rotate(var(--r,0deg));
+  background:radial-gradient(circle at 34% 30%,rgba(255,255,255,.62) 0,rgba(255,255,255,.14) 18%,rgba(255,255,255,0) 34%),radial-gradient(circle at 62% 72%,rgba(0,0,0,.3),rgba(0,0,0,0) 58%),var(--c,#a9afa5);
+  box-shadow:0 1px 1.5px rgba(0,0,0,.6),inset 0 0 0 .5px rgba(0,0,0,.25)}
+.seed.drop{animation:drop .26s cubic-bezier(.25,1.5,.5,1)}
+@keyframes drop{from{transform:translate(-50%,-170%) rotate(var(--r,0deg)) scale(1.2);opacity:.3}}
+
+.store{display:flex;align-items:center;gap:8px;min-width:0;min-height:0}
+.board.h .store{flex-direction:column;justify-content:center}
+.board.v .store{flex-direction:row}
+.trough{position:relative;border-radius:999px;
+  background:radial-gradient(ellipse at 50% 42%,#1f0e07 0%,#2d160b 50%,#43220f 84%,#58301a 100%);
+  box-shadow:var(--carve);transition:box-shadow .2s ease}
+.trough .seeds{--sz:calc(var(--hole)*.17)}
+.board.h .trough{width:calc(var(--hole)*.86);flex:1;min-height:0}
+.board.v .trough{height:calc(var(--hole)*.84);flex:1;min-width:0}
+.meta{display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center}
+.board.v .meta{min-width:92px}
+.score{font-family:var(--f-display);font-size:max(22px,calc(var(--hole)*.34));line-height:1;color:#fff1de;text-shadow:0 2px 0 rgba(0,0,0,.45);font-variant-numeric:tabular-nums}
+.score.pop{animation:pop .42s ease}
+@keyframes pop{40%{transform:scale(1.28);color:var(--gold)}}
+.who{display:flex;align-items:center;gap:5px;font-weight:700;font-size:12px;line-height:1.1;color:var(--engrave);white-space:nowrap}
+.who .dot{width:7px;height:7px;border-radius:50%;background:rgba(255,232,206,.22);flex:none}
+.role{font:500 10px/1.1 var(--f-mono);color:var(--engrave-2);white-space:nowrap;letter-spacing:.02em}
+.store.turn .who{color:var(--gold)}
+.store.turn .dot{background:var(--gold);box-shadow:0 0 0 3px var(--gold-glow)}
+.store.turn .trough{box-shadow:var(--carve),0 0 0 2px rgba(234,176,63,.55)}
+
+.hand{position:absolute;left:0;top:0;z-index:5;pointer-events:none;display:flex;align-items:center;gap:6px;padding:4px 9px 4px 6px;border-radius:999px;background:rgba(16,21,42,.93);border:1px solid var(--gold);color:var(--gold);font:500 13px/1 var(--f-mono);box-shadow:0 6px 16px rgba(0,0,0,.45);transition-property:transform;transition-timing-function:ease;will-change:transform}
+.hand .seed,.reveal .seed{position:relative;left:auto;top:auto;transform:none;--sz:13px;flex:none}
+
+/* ---------- status ---------- */
+.status{display:flex;align-items:flex-start;justify-content:space-between;gap:12px 20px;flex-wrap:wrap;max-width:980px;margin-inline:auto;padding-top:18px}
+.status .text{flex:1 1 300px;min-width:0;display:flex;flex-direction:column;gap:2px}
+.event{margin:0;min-height:1.45em;font-size:13px;color:var(--gold);text-wrap:pretty}
+.prompt{margin:0;font-size:17px;text-wrap:pretty}
+.legend{margin:6px 0 0;font-size:12px;color:var(--ink-3);display:flex;align-items:center;gap:8px}
+.legend i{width:14px;height:14px;border-radius:50%;border:2px dashed var(--threat);flex:none}
+.status .net{margin-top:8px;font-size:13px}
+.controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.switch{display:inline-flex;align-items:center;gap:9px;min-height:42px;font-weight:700;font-size:14px;cursor:pointer}
+.switch input{appearance:none;-webkit-appearance:none;margin:0;width:40px;height:24px;border-radius:999px;background:var(--cloth-3);border:1px solid var(--line);position:relative;cursor:pointer;transition:background .15s,border-color .15s}
+.switch input::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--ink-2);transition:transform .15s,background .15s}
+.switch input:checked{background:rgba(234,176,63,.3);border-color:var(--gold)}
+.switch input:checked::after{transform:translateX(16px);background:var(--gold)}
+
+/* ---------- súmula ---------- */
+.log{border-top:1px solid var(--line);padding-top:16px;min-width:0}
+.log h2{font-family:var(--f-display);font-weight:400;font-size:22px;line-height:1.1;margin:0 0 4px}
+.log .sub{margin:0 0 12px;font-size:13px;color:var(--ink-3);max-width:46ch}
+.log .scroll{max-height:240px;overflow:auto}
+.log table{width:100%;border-collapse:collapse;font:400 14px/1.2 var(--f-mono);font-variant-numeric:tabular-nums}
+.log th{position:sticky;top:0;background:var(--cloth);text-align:left;padding:6px 8px;font:700 11px/1 var(--f-body);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);border-bottom:1px solid var(--line)}
+.log td{padding:6px 8px;border-bottom:1px solid rgba(205,214,255,.06)}
+.log td.n{color:var(--ink-3);width:2.5em}
+.log td.last{color:var(--gold)}
+.log .cap{color:var(--gold);margin-left:6px;font-size:12px}
+.log .empty{margin:10px 0 0;font-size:13px;color:var(--ink-3)}
+@media (min-width:1100px){
+  .stage{grid-template-columns:minmax(0,1fr) 250px;align-items:start}
+  .log{border-top:0;border-left:1px solid var(--line);padding:2px 0 2px 22px;position:sticky;top:env(safe-area-inset-top,0px)}
+  .log .scroll{max-height:min(62vh,540px)}
+}
+
+/* ---------- janelas ---------- */
+.overlay{position:fixed;inset:0;z-index:20;display:grid;place-items:center;
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
+  background:rgba(8,11,24,.72);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+.sheet{width:min(560px,100%);max-height:100%;overflow:auto;background:var(--cloth-2);border:1px solid var(--line);border-radius:12px;padding:24px;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.sheet h2{font-family:var(--f-display);font-weight:400;font-size:30px;line-height:1.05;margin:0 0 8px;text-wrap:balance}
+.sheet p{margin:0;color:var(--ink-2);max-width:62ch}
+.sheet .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+.sheet h3{margin:20px 0 4px;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+.sheet .credit{margin-top:20px;padding-top:14px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-3)}
+.rules{width:min(640px,100%)}
+.mini{display:grid;grid-template-columns:30px repeat(6,minmax(0,1fr)) 30px;grid-template-rows:repeat(2,32px);gap:5px;padding:8px;margin:16px 0 8px;max-width:380px;border-radius:18px;background-color:var(--wood);background-image:linear-gradient(180deg,rgba(255,222,186,.1),rgba(0,0,0,.24))}
+.mini span{display:grid;place-items:center;border-radius:50%;background:rgba(0,0,0,.38);font:500 12px/1 var(--f-mono);color:var(--engrave)}
+.mini .ms{grid-row:1/span 2;border-radius:15px;font:700 11px/1 var(--f-body);letter-spacing:.06em}
+.mini-cap{font-size:13px}
+
+.hands{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}
+.handbtn{display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--cloth-3);cursor:pointer;font-weight:700;transition:border-color .15s,transform .15s}
+.handbtn:hover:not(:disabled){border-color:var(--gold);transform:translateY(-2px)}
+.handbtn:disabled{cursor:default}
+.handbtn svg{width:min(104px,100%);height:auto}
+.handbtn.right svg{transform:scaleX(-1)}
+.handbtn.chosen{border-color:var(--gold)}
+.fist g{stroke:var(--skin-line);stroke-width:3;stroke-linejoin:round;stroke-linecap:round}
+.fist .b{fill:var(--skin)}
+.fist .f{fill:var(--skin-2)}
+.fist .t{fill:var(--skin-3)}
+.reveal{min-height:20px;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;color:var(--ink-3)}
+.reveal.has{color:var(--gold);font-weight:700}
+.rit-result{margin-top:16px!important;min-height:1.5em;font-size:16px;color:var(--ink)!important}
+
+.end{text-align:center}
+.end .sheet-inner{display:flex;flex-direction:column;align-items:center}
+.kicker{font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)!important;margin-bottom:6px!important}
+.final{display:flex;align-items:flex-end;justify-content:center;gap:18px;margin:14px 0 12px}
+.final div{display:flex;flex-direction:column;align-items:center;gap:4px}
+.final b{font-family:var(--f-display);font-weight:400;font-size:52px;line-height:1;color:var(--ink);font-variant-numeric:tabular-nums}
+.final span{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.final .x{font-family:var(--f-display);font-size:24px;color:var(--ink-3);padding-bottom:22px}
+.end .actions{justify-content:center}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body data-screen="home">
+<div class="weave" aria-hidden="true"></div>
+<div class="app">
+  <header class="top">
+    <div class="brand"><span class="eyebrow">Mancala</span><span class="name">Awelé</span></div>
+    <div class="actions">
+      <button class="btn" id="openRules" type="button">Regras</button>
+      <button class="btn icon-btn" id="sound" type="button" aria-pressed="true" aria-label="Som ligado">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M4 9h4l5-4v14l-5-4H4z"/>
+          <path class="wave" d="M16.5 8.5a5 5 0 0 1 0 7"/>
+          <path class="wave" d="M19 6a8.5 8.5 0 0 1 0 12"/>
+          <path class="mute" d="M16 9l6 6M22 9l-6 6"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ===== TELA INICIAL ===== -->
+  <section class="home" id="home">
+    <div class="hero">
+      <span class="eyebrow">Mancala</span>
+      <h1 class="hero-title">Awelé</h1>
+      <p class="lede">O jogo africano de semear e colher. Duas pessoas, 48 sementes e uma regra de ouro: ninguém pode deixar o outro passar fome.</p>
+    </div>
+    <div class="deco" id="deco" aria-hidden="true"></div>
+    <div class="menu">
+      <button class="choice primary" id="goCreate" type="button"><span class="ic" aria-hidden="true">+</span><span class="ct">Criar partida</span><span class="cd">Gera um número e um QR Code para o seu colega entrar.</span></button>
+      <button class="choice" id="goJoin" type="button"><span class="ic" aria-hidden="true">#</span><span class="ct">Entrar em partida</span><span class="cd">Digite o número que aparece na tela do seu colega.</span></button>
+      <button class="choice" id="goRules" type="button"><span class="ic" aria-hidden="true">?</span><span class="ct">Entender as regras</span><span class="cd">Como semear, colher e vencer, em dois minutos de leitura.</span></button>
+    </div>
+    <div class="alt">
+      <button class="btn primary" id="resume" type="button" hidden>Voltar para a partida</button>
+      <button class="linkish" id="goAi" type="button">Sem ninguém por perto? Treine contra o computador</button>
+    </div>
+    <p class="credit">Regras do livro Mancala Awelé, da Coleção Jogos de Tabuleiro (Secretaria Municipal de Educação de São Paulo, 2020).</p>
+  </section>
+
+  <!-- ===== CRIAR PARTIDA ===== -->
+  <section class="panel" id="lobby" hidden>
+    <button class="btn back" id="lobbyBack" type="button">← Voltar</button>
+    <h2>Partida criada</h2>
+    <p>Peça para o seu colega apontar a câmera do celular para o QR Code, ou abrir o jogo, tocar em <b>Entrar em partida</b> e digitar o número.</p>
+    <div class="ticket">
+      <div class="qr" id="qr">Gerando QR Code…</div>
+      <div class="code-block">
+        <span class="label">Número da partida</span>
+        <div class="digits" id="digits" aria-label="Número da partida"></div>
+        <div class="row"><button class="btn" id="shareLink" type="button">Enviar link</button></div>
+        <span class="link-out" id="linkOut"></span>
+      </div>
+    </div>
+    <p class="net wait" id="lobbyStatus"><i></i><span>Abrindo a partida…</span></p>
+  </section>
+
+  <!-- ===== ENTRAR EM PARTIDA ===== -->
+  <section class="panel" id="join" hidden>
+    <button class="btn back" id="joinBack" type="button">← Voltar</button>
+    <h2>Entrar em partida</h2>
+    <p>Digite o número de 4 dígitos que aparece na tela do seu colega.</p>
+    <form class="join-form" id="joinForm" autocomplete="off">
+      <label class="label" for="codeIn" hidden>Número da partida</label>
+      <input id="codeIn" name="code" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="0000" aria-label="Número da partida">
+      <button class="btn primary" type="submit">Entrar</button>
+    </form>
+    <p class="net" id="joinStatus"><i></i><span></span></p>
+    <p class="tip">Tem QR Code na tela do seu colega? Abra a câmera do celular e aponte para ele: o jogo abre já dentro da partida.</p>
+  </section>
+
+  <!-- ===== JOGO ===== -->
+  <main class="stage" id="game" hidden>
+    <section class="table" aria-label="Tabuleiro">
+      <div class="board-wrap" id="boardWrap">
+        <div class="board h" id="board"></div>
+        <div class="hand" id="hand" hidden><i class="seed" style="--c:#a9afa5"></i><span id="handN">4</span></div>
+      </div>
+      <div class="status">
+        <div class="text" aria-live="polite">
+          <p class="event" id="event"></p>
+          <p class="prompt" id="prompt"></p>
+          <p class="legend" id="legend"><i></i>Casa sua que o adversário pode colher na próxima jogada</p>
+          <p class="net" id="netStatus" hidden><i></i><span></span></p>
+        </div>
+        <div class="controls">
+          <label class="switch" for="hints"><input type="checkbox" id="hints" checked>Dicas</label>
+          <button class="btn" id="undo" type="button">Desfazer lance</button>
+          <button class="btn" id="leave" type="button">Sair</button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="log" aria-labelledby="logTitle">
+      <h2 id="logTitle">Súmula</h2>
+      <p class="sub">Cada lance é anotado só pelo número da casa semeada, como na planilha de anotação do livro.</p>
+      <div class="scroll" id="logScroll">
+        <table>
+          <thead><tr><th>#</th><th id="thS">Sul</th><th id="thN">Norte</th></tr></thead>
+          <tbody id="logBody"></tbody>
+        </table>
+        <p class="empty" id="logEmpty">Nenhum lance ainda.</p>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<div class="overlay" id="ritual" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="ritTitle" style="width:min(460px,100%)">
+    <h2 id="ritTitle">Quem começa?</h2>
+    <p id="ritIntro"></p>
+    <div class="hands">
+      <button class="handbtn" type="button" data-hand="esq">
+        <svg class="fist" viewBox="0 0 120 120" aria-hidden="true"><g>
+          <path class="b" d="M46 96v18h32V96"/>
+          <rect class="b" x="20" y="40" width="80" height="62" rx="26"/>
+          <rect class="f" x="24" y="26" width="22" height="32" rx="11"/>
+          <rect class="f" x="44" y="21" width="22" height="35" rx="11"/>
+          <rect class="f" x="64" y="24" width="20" height="33" rx="10"/>
+          <rect class="f" x="82" y="31" width="16" height="27" rx="8"/>
+          <path class="t" d="M26 72c14-10 36-10 50-4 6 3 4 12-4 12-14-2-30 0-42 4-6 0-8-8-4-12z"/>
+        </g></svg>
+        Esquerda
+        <span class="reveal"></span>
+      </button>
+      <button class="handbtn right" type="button" data-hand="dir">
+        <svg class="fist" viewBox="0 0 120 120" aria-hidden="true"><g>
+          <path class="b" d="M46 96v18h32V96"/>
+          <rect class="b" x="20" y="40" width="80" height="62" rx="26"/>
+          <rect class="f" x="24" y="26" width="22" height="32" rx="11"/>
+          <rect class="f" x="44" y="21" width="22" height="35" rx="11"/>
+          <rect class="f" x="64" y="24" width="20" height="33" rx="10"/>
+          <rect class="f" x="82" y="31" width="16" height="27" rx="8"/>
+          <path class="t" d="M26 72c14-10 36-10 50-4 6 3 4 12-4 12-14-2-30 0-42 4-6 0-8-8-4-12z"/>
+        </g></svg>
+        Direita
+        <span class="reveal"></span>
+      </button>
+    </div>
+    <p class="rit-result" id="ritResult" aria-live="polite"></p>
+    <div class="actions"><button class="btn primary" id="ritGo" type="button" hidden>Ir para o tabuleiro</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="rulesDlg" hidden>
+  <div class="sheet rules" role="dialog" aria-modal="true" aria-labelledby="rulesTitle">
+    <h2 id="rulesTitle">Como jogar</h2>
+    <p>Mancala é uma família de jogos africanos de semear e colher. Awelé é a versão da Costa do Marfim: dois jogadores, 48 sementes e uma regra de ouro, ninguém pode deixar o outro passar fome.</p>
+    <div class="mini" aria-hidden="true">
+      <span class="ms">N</span><span>12</span><span>11</span><span>10</span><span>9</span><span>8</span><span>7</span><span class="ms">S</span>
+      <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span>
+    </div>
+    <p class="mini-cap">Sul embaixo (casas 1 a 6), Norte em cima (7 a 12). Cada um guarda o que colhe no depósito à sua direita. No jogo, a sua fileira fica sempre do seu lado da tela.</p>
+    <h3>Preparação</h3>
+    <p>Cada uma das 12 casas começa com 4 sementes.</p>
+    <h3>Semear</h3>
+    <p>Na sua vez, escolha uma casa da sua fileira, pegue todas as sementes dela e solte uma em cada casa seguinte, no sentido anti-horário. Os depósitos não recebem sementes na semeadura.</p>
+    <h3>Reserva Krou</h3>
+    <p>Uma casa com 12 sementes ou mais dá a volta inteira no tabuleiro. Na volta, a casa de onde as sementes saíram é pulada.</p>
+    <h3>Colher</h3>
+    <p>Se a última semente cair numa casa do adversário e ela ficar com 2 ou 3 sementes, você colhe essa casa. Depois olhe a casa anterior: se ela também tiver 2 ou 3, colha também, e assim por diante até achar uma que não tenha. Só se colhe no campo do adversário.</p>
+    <h3>Dar de comer</h3>
+    <p>Se o adversário ficar sem sementes, você é obrigado a jogar uma casa que leve sementes até ele. E uma colheita que levaria todas as sementes dele é anulada: a semeadura vale, a colheita não.</p>
+    <h3>Fim da partida</h3>
+    <p>Vence quem colher 25 sementes. Com 24 a 24, é empate. Se não houver como dar de comer ao adversário, ou se a única jogada possível deixaria a partida sem continuidade, o jogo acaba e cada um colhe as sementes da própria fileira. O mesmo vale quando a partida fica rodando sem colheitas.</p>
+    <h3>Quem começa</h3>
+    <p>Um jogador esconde uma semente numa das mãos. Quem acertar a mão começa e joga de Sul.</p>
+    <h3>Dicas na tela</h3>
+    <p>Com as dicas ligadas, um contorno tracejado laranja marca as suas casas que o adversário pode colher na próxima jogada. Com mouse, passe o cursor sobre uma casa para ver onde a última semente cai e quanto ela colhe.</p>
+    <p class="credit">Regras conforme o livro Mancala Awelé, da Coleção Jogos de Tabuleiro (Secretaria Municipal de Educação de São Paulo, 2020).</p>
+    <div class="actions"><button class="btn primary" type="button" data-close>Entendi</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="endDlg" hidden>
+  <div class="sheet end" role="dialog" aria-modal="true" aria-labelledby="endTitle" style="width:min(440px,100%)">
+    <div class="sheet-inner">
+      <p class="kicker">Fim de partida</p>
+      <h2 id="endTitle"></h2>
+      <div class="final">
+        <div><b id="endA">0</b><span id="endAName"></span></div>
+        <span class="x">×</span>
+        <div><b id="endB">0</b><span id="endBName"></span></div>
+      </div>
+      <p id="endWhy"></p>
+      <div class="actions">
+        <button class="btn primary" id="again" type="button">Jogar de novo</button>
+        <button class="btn" type="button" data-close>Ver o tabuleiro</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<noscript><p style="padding:16px">Este jogo precisa de JavaScript ligado no navegador.</p></noscript>
+
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const PEERJS = 'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js';
+const QRLIB = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js';
+const ID_PREFIX = 'awele-mancala-ufg-';
+const boardEl = $('#board'), wrapEl = $('#boardWrap'), handEl = $('#hand'), handN = $('#handN');
+const eventEl = $('#event'), promptEl = $('#prompt'), legendEl = $('#legend');
+const logBody = $('#logBody'), logScroll = $('#logScroll'), logEmpty = $('#logEmpty');
+const undoBtn = $('#undo'), hintsBox = $('#hints'), soundBtn = $('#sound'), leaveBtn = $('#leave');
+const rulesDlg = $('#rulesDlg'), endDlg = $('#endDlg'), ritualEl = $('#ritual');
+const motionOK = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+/* ===== REGRAS (livro Mancala Awelé, SME-SP 2020) =====
+   Casas 0-5 = Sul (casas 1 a 6 do livro), 6-11 = Norte (7 a 12).
+   pos = { b: sementes por casa, s: [depósito Sul, depósito Norte], turn: 0 Sul / 1 Norte } */
+const owner = i => (i < 6 ? 0 : 1);
+const rowSum = (b, p) => { let s = 0; for (let i = p * 6; i < p * 6 + 6; i++) s += b[i]; return s; };
+const initialPos = () => ({ b: Array(12).fill(4), s: [0, 0], turn: 0 });
+
+// semeia uma por casa no sentido anti-horário, pulando a casa de origem (reserva Krou)
+function sow(b, from) {
+  const nb = b.slice(); let n = nb[from], i = from; const path = [];
+  nb[from] = 0;
+  while (n > 0) { i = (i + 1) % 12; if (i === from) continue; nb[i]++; n--; path.push(i); }
+  return { board: nb, path };
+}
+
+// jogada completa: semeia e colhe casas do adversário com 2 ou 3, voltando casa a casa
+function play(pos, from) {
+  const p = pos.turn, o = 1 - p;
+  const { board: b, path } = sow(pos.b, from);
+  const last = path[path.length - 1];
+  let caps = [];
+  if (owner(last) === o) {
+    for (let j = last; j >= o * 6 && (b[j] === 2 || b[j] === 3); j--) caps.push(j);
+  }
+  let taken = 0, slam = false;
+  if (caps.length) {
+    const sum = caps.reduce((a, j) => a + b[j], 0);
+    if (sum === rowSum(b, o)) { slam = true; caps = []; }   // levaria tudo: colheita anulada
+    else for (const j of caps) { taken += b[j]; b[j] = 0; }
+  }
+  const s = pos.s.slice(); s[p] += taken;
+  return { pos: { b, s, turn: o }, path, caps, taken, slam };
+}
+
+// p consegue mandar ao menos uma semente para o campo do adversário?
+function canFeed(b, p) {
+  for (let k = 0; k < 6; k++) if (b[p * 6 + k] >= 6 - k) return true;
+  return false;
+}
+
+function legal(pos) {
+  const p = pos.turn, o = 1 - p, b = pos.b;
+  let moves = [];
+  for (let k = 0; k < 6; k++) if (b[p * 6 + k] > 0) moves.push(p * 6 + k);
+  const mustFeed = rowSum(b, o) === 0;
+  if (mustFeed) moves = moves.filter(i => b[i] >= 6 - (i - p * 6));
+  if (!moves.length) return { moves, mustFeed, reason: 'fome' };
+  // não vale a jogada que deixa você sem sementes se o adversário não puder te alimentar
+  const ok = moves.filter(i => { const r = play(pos, i).pos; return rowSum(r.b, p) > 0 || canFeed(r.b, o); });
+  return { moves: ok, mustFeed, reason: ok.length ? null : 'impasse' };
+}
+
+/* ===== COMPUTADOR (negamax com poda alfa-beta) ===== */
+function negamax(pos, depth, alpha, beta, ply, ctx) {
+  if ((++ctx.nodes & 1023) === 0 && performance.now() > ctx.deadline) ctx.abort = true;
+  if (ctx.abort) return 0;
+  const me = pos.turn, op = 1 - me;
+  if (pos.s[op] >= 25) return -1000 + ply;
+  if (pos.s[me] >= 25) return 1000 - ply;
+  const L = legal(pos);
+  if (!L.moves.length) {
+    const a = pos.s[me] + rowSum(pos.b, me), c = pos.s[op] + rowSum(pos.b, op);
+    return a > c ? 1000 - ply : a < c ? -1000 + ply : 0;
+  }
+  if (depth <= 0) return 10 * (pos.s[me] - pos.s[op]) + 0.5 * (rowSum(pos.b, me) - rowSum(pos.b, op));
+  const kids = L.moves.map(m => play(pos, m)).sort((x, y) => y.taken - x.taken);
+  let best = -Infinity;
+  for (const k of kids) {
+    const v = -negamax(k.pos, depth - 1, -beta, -alpha, ply + 1, ctx);
+    if (v > best) best = v;
+    if (v > alpha) alpha = v;
+    if (alpha >= beta) break;
+  }
+  return best;
+}
+function rootSearch(pos, moves, depth, ctx) {
+  let best = -Infinity, pick = [];
+  for (const m of moves) {
+    const v = -negamax(play(pos, m).pos, depth - 1, -Infinity, -(best - 0.5), 1, ctx);
+    if (ctx.abort) break;
+    if (v > best + 0.25) { best = v; pick = [m]; }
+    else if (Math.abs(v - best) <= 0.25) pick.push(m);
+  }
+  return { move: pick[(Math.random() * pick.length) | 0], score: best, complete: !ctx.abort };
+}
+function aiChoose(pos) {
+  const moves = legal(pos).moves;
+  if (moves.length === 1) return moves[0];
+  return rootSearch(pos, moves, 4, { deadline: Infinity, nodes: 0, abort: false }).move;
+}
+
+// refaz a partida a partir da lista de lances (usado para sincronizar os dois celulares)
+function rebuild(moves) {
+  let pos = initialPos(), quiet = 0;
+  const log = [], reps = {}, key = p => p.b.join(',') + '|' + p.turn;
+  reps[key(pos)] = 1;
+  for (const m of moves) {
+    const r = play(pos, m);
+    log.push({ p: pos.turn, casa: m + 1, taken: r.taken });
+    quiet = r.taken ? 0 : quiet + 1;
+    pos = r.pos;
+    reps[key(pos)] = (reps[key(pos)] || 0) + 1;
+  }
+  return { pos, log, reps, quiet };
+}
+function validMoves(list) {
+  if (!Array.isArray(list) || list.length > 800) return false;
+  let pos = initialPos();
+  for (const m of list) {
+    if (!Number.isInteger(m) || pos.s[0] >= 25 || pos.s[1] >= 25) return false;
+    if (!legal(pos).moves.includes(m)) return false;
+    pos = play(pos, m).pos;
+  }
+  return true;
+}
+
+/* ===== ESTADO ===== */
+const G = {
+  mode: 'ai', human: 0, hints: true, sound: true, screen: 'home',
+  pos: initialPos(), moves: [], hist: [], log: [], reps: {}, quiet: 0, over: null, legal: null,
+  busy: false, gid: 0, event: '', prompt: '', ritualSeed: 'esq'
+};
+const NET = { role: null, code: null, peer: null, conn: null, sul: null, seed: null, token: null, guestToken: null,
+  lastSeen: 0, alive: false, gen: 0, beat: null, retry: null, attempts: 0, inbox: [], ui: { kind: 'wait', text: '' } };
+const nearSide = () => G.human;
+const isHumanTurn = () => G.pos.turn === G.human;
+const online = () => G.mode === 'online';
+const nameOf = p => (p === G.human ? 'Você' : online() ? 'Seu colega' : 'O computador');
+const plural = (n, a, b) => `${n} ${n === 1 ? a : b}`;
+
+function loadPrefs() {
+  try {
+    const p = JSON.parse(localStorage.getItem('awele-prefs') || '{}');
+    if (typeof p.hints === 'boolean') G.hints = p.hints;
+    if (typeof p.sound === 'boolean') G.sound = p.sound;
+  } catch (e) { /* sem armazenamento: segue com o padrão */ }
+}
+function savePrefs() {
+  try { localStorage.setItem('awele-prefs', JSON.stringify({ hints: G.hints, sound: G.sound })); } catch (e) {}
+}
+
+/* ===== TELAS ===== */
+const screens = { home: $('#home'), lobby: $('#lobby'), join: $('#join'), game: $('#game') };
+function show(name) {
+  for (const k in screens) screens[k].hidden = k !== name;
+  document.body.dataset.screen = name;
+  const changed = G.screen !== name;
+  G.screen = name;
+  if (name === 'game') layout(true);
+  if (changed) window.scrollTo(0, 0);
+}
+
+/* ===== MONTAGEM DO TABULEIRO ===== */
+const pitEls = [], storeEls = [];
+for (let i = 0; i < 12; i++) {
+  const el = document.createElement('button');
+  el.type = 'button'; el.className = 'pit';
+  el.innerHTML = `<span class="num">${i + 1}</span><span class="hole"><span class="seeds"></span></span><span class="cnt"></span>`;
+  el.seedsEl = el.querySelector('.seeds'); el.cntEl = el.querySelector('.cnt'); el.holeEl = el.querySelector('.hole');
+  el.addEventListener('click', () => humanPlay(i));
+  el.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') preview(i); });
+  el.addEventListener('pointerleave', clearPreview);
+  el.addEventListener('focus', () => preview(i));
+  el.addEventListener('blur', clearPreview);
+  boardEl.appendChild(el); pitEls.push(el);
+}
+for (let p = 0; p < 2; p++) {
+  const el = document.createElement('div');
+  el.className = 'store';
+  el.innerHTML = `<div class="trough"><span class="seeds"></span></div><div class="meta"><span class="score">0</span><span class="who"><span class="dot"></span><span class="nm"></span></span><span class="role"></span></div>`;
+  el.seedsEl = el.querySelector('.seeds'); el.scoreEl = el.querySelector('.score');
+  el.nameEl = el.querySelector('.nm'); el.roleEl = el.querySelector('.role');
+  boardEl.appendChild(el); storeEls.push(el);
+}
+
+// textura de madeira gerada uma vez (veios ondulados)
+const grainCache = {};
+function grain(vertical) {
+  const key = vertical ? 'v' : 'h';
+  if (grainCache[key]) return grainCache[key];
+  const w = 1200, h = 420;
+  const c = document.createElement('canvas');
+  c.width = vertical ? h : w; c.height = vertical ? w : h;
+  const x = c.getContext('2d');
+  if (vertical) { x.translate(h, 0); x.rotate(Math.PI / 2); }
+  let a = 1234567;
+  const R = () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const g = x.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, '#7d4828'); g.addColorStop(.5, '#6d3e21'); g.addColorStop(1, '#5c321b');
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+  for (let n = 0; n < 190; n++) {
+    const y0 = R() * h, amp = 2 + R() * 9, f = 1 / (110 + R() * 260), ph = R() * 6.28, dark = R() < .64;
+    x.strokeStyle = dark ? `rgba(34,15,5,${.08 + R() * .22})` : `rgba(184,124,78,${.05 + R() * .12})`;
+    x.lineWidth = .5 + R() * 2.4;
+    x.beginPath();
+    for (let px = -10; px <= w + 10; px += 10) {
+      const y = y0 + Math.sin(px * f + ph) * amp + Math.sin(px * f * 3.3 + ph * 2) * amp * .22;
+      px === -10 ? x.moveTo(px, y) : x.lineTo(px, y);
+    }
+    x.stroke();
+  }
+  return (grainCache[key] = c.toDataURL('image/jpeg', .82));
+}
+
+let lastW = 0, lastH = 0, orient = null;
+function layout(force) {
+  const W = wrapEl.clientWidth, H = window.innerHeight;
+  if (!W) return;
+  if (!force && W === lastW && H === lastH) return;
+  lastW = W; lastH = H;
+  const vertical = W < 640;
+  const pad = vertical ? 12 : 16, gap = 6;
+  let hole, cw, ch, sw = 0, sh = 0;
+  if (!vertical) {
+    const C = Math.min(118, (W - 2 * pad - 7 * gap) / 8.6);
+    hole = Math.max(40, Math.min(C - 10, 100, (H - 150 - 2 * pad - gap) / 2 - 36));
+    cw = Math.floor(hole + 10); ch = Math.floor(hole + 36); sw = Math.round(cw * 1.3);
+  } else {
+    const col = Math.floor((W - 2 * pad - gap) / 2);
+    hole = Math.max(46, Math.min(col - 50, 74, (H - 316) / 7.9));
+    cw = col; ch = Math.floor(hole + 10); sh = Math.round(hole * .95 + 10);
+  }
+  hole = Math.floor(hole);
+  const st = boardEl.style;
+  st.setProperty('--hole', hole + 'px'); st.setProperty('--pad', pad + 'px'); st.setProperty('--gap', gap + 'px');
+  st.setProperty('--cw', cw + 'px'); st.setProperty('--ch', ch + 'px'); st.setProperty('--sw', sw + 'px'); st.setProperty('--sh', sh + 'px');
+  boardEl.classList.toggle('h', !vertical); boardEl.classList.toggle('v', vertical);
+  if (orient !== vertical) { orient = vertical; st.setProperty('--grain', `url(${grain(vertical)})`); }
+  place(vertical);
+}
+
+// quem joga neste aparelho fica embaixo (ou à esquerda, no celular em pé)
+function place(vertical) {
+  const near = nearSide();
+  for (let i = 0; i < 12; i++) {
+    const el = pitEls[i], isNear = owner(i) === near, k = i % 6;
+    el.classList.toggle('near', isNear); el.classList.toggle('far', !isNear);
+    if (vertical) { el.style.gridColumn = isNear ? '1' : '2'; el.style.gridRow = String(isNear ? 2 + k : 7 - k); }
+    else { el.style.gridRow = isNear ? '2' : '1'; el.style.gridColumn = String(isNear ? 2 + k : 7 - k); }
+  }
+  for (let p = 0; p < 2; p++) {
+    const el = storeEls[p], isNear = p === near;
+    if (vertical) { el.style.gridColumn = '1 / span 2'; el.style.gridRow = isNear ? '8' : '1'; }
+    else { el.style.gridRow = '1 / span 2'; el.style.gridColumn = isNear ? '8' : '1'; }
+  }
+}
+
+/* ===== DESENHO ===== */
+const COLORS = ['#a9afa5', '#979f98', '#b8b6a7', '#8b9590', '#a7a292', '#9ca8a2', '#b1b3a9'];
+const SEED_TAG = '<i class="seed" style="--c:#a9afa5"></i>';
+const frac = v => v - Math.floor(v);
+const hash = (a, b) => frac(Math.sin(a * 12.9898 + b * 78.233) * 43758.5453);
+
+// sementes em espiral (como girassol): poucas ficam no centro, muitas fazem um montinho
+function seedsHTML(n, slot, store) {
+  let out = '';
+  const c = n <= 12 ? 0.11 : 0.385 / Math.sqrt(n);
+  for (let k = 0; k < n; k++) {
+    const r = store ? 0.37 * Math.sqrt((k + 0.5) / 48) : c * Math.sqrt(k + 0.5);
+    const ang = k * 2.39996 + (store ? 1.1 : 0.4);
+    const x = r * Math.cos(ang) + (hash(slot, k) - 0.5) * 0.02;
+    const y = r * Math.sin(ang) + (hash(k, slot + 7) - 0.5) * 0.02;
+    const col = COLORS[(hash(slot + 3, k * 2) * COLORS.length) | 0];
+    out += `<i class="seed" style="left:${(50 + x * 100).toFixed(1)}%;top:${(50 + y * 100).toFixed(1)}%;--r:${(hash(k, slot) * 180) | 0}deg;--c:${col}"></i>`;
+  }
+  return out;
+}
+function drawPit(i, n, drop) {
+  const el = pitEls[i];
+  el.seedsEl.style.setProperty('--f', n > 16 ? Math.max(.68, Math.sqrt(16 / n)).toFixed(3) : 1);
+  el.seedsEl.innerHTML = seedsHTML(n, i, false);
+  if (drop && n && motionOK) el.seedsEl.lastElementChild.classList.add('drop');
+  el.cntEl.innerHTML = n + (n >= 12 ? '<span class="krou">krou</span>' : '');
+  el.setAttribute('aria-label', `Casa ${i + 1}, ${plural(n, 'semente', 'sementes')}`);
+}
+function drawStore(p, n, pop) {
+  const el = storeEls[p];
+  el.seedsEl.innerHTML = seedsHTML(n, 20 + p, true);
+  el.scoreEl.textContent = n;
+  if (pop && motionOK) { el.scoreEl.classList.remove('pop'); void el.scoreEl.offsetWidth; el.scoreEl.classList.add('pop'); }
+}
+
+function buildDeco() {
+  const counts = [3, 0, 5, 6, 1, 2, 4, 4, 0, 7, 2, 3], stores = [6, 5];
+  let html = `<div class="ds" style="grid-column:1"><span class="seeds">${seedsHTML(stores[1], 31, true)}</span></div>`;
+  for (let i = 0; i < 12; i++) {
+    const near = i < 6, k = i % 6;
+    html += `<div class="dh" style="grid-column:${near ? 2 + k : 7 - k};grid-row:${near ? 2 : 1}"><span class="seeds">${seedsHTML(counts[i], i + 40, false)}</span></div>`;
+  }
+  html += `<div class="ds" style="grid-column:8"><span class="seeds">${seedsHTML(stores[0], 30, true)}</span></div>`;
+  const el = $('#deco');
+  el.innerHTML = html;
+  el.style.setProperty('--grain', `url(${grain(false)})`);
+}
+
+function threatened(pos) {
+  const v = pos.turn, o = 1 - v, set = new Set(), X = { b: pos.b, s: pos.s, turn: o };
+  for (let k = 0; k < 6; k++) {
+    const i = o * 6 + k;
+    if (pos.b[i]) for (const c of play(X, i).caps) set.add(c);
+  }
+  return set;
+}
+
+function turnPrompt(L) {
+  const p = G.pos.turn, range = p === 0 ? '1 a 6' : '7 a 12';
+  if (online() && !NET.alive) return 'Sem conexão com o seu colega. O jogo volta assim que ele reconectar.';
+  if (p !== G.human) return online() ? 'Vez do seu colega.' : 'Vez do computador.';
+  if (L.mustFeed) return `Sua vez: ${online() ? 'seu colega' : 'o computador'} está sem sementes e precisa comer. Só valem as casas destacadas.`;
+  return `Sua vez: escolha uma das suas casas (${range}) para semear.`;
+}
+
+function render() {
+  const pos = G.pos;
+  if (G.legal && !G.busy && !G.over) G.prompt = turnPrompt(G.legal);
+  const active = !G.busy && !G.over && isHumanTurn() && G.legal && (!online() || NET.alive);
+  const legalSet = new Set(active ? G.legal.moves : []);
+  const threats = G.hints && active ? threatened(pos) : new Set();
+  for (let i = 0; i < 12; i++) {
+    const el = pitEls[i];
+    drawPit(i, pos.b[i]);
+    el.classList.toggle('legal', legalSet.has(i));
+    el.classList.toggle('locked', !!active && owner(i) === pos.turn && !legalSet.has(i));
+    el.classList.toggle('threat', threats.has(i));
+    el.classList.remove('land', 'wouldcap', 'harvest', 'picked');
+    el.disabled = !legalSet.has(i);
+  }
+  for (let p = 0; p < 2; p++) {
+    const el = storeEls[p];
+    drawStore(p, pos.s[p]);
+    el.classList.toggle('turn', !G.over && pos.turn === p);
+    el.nameEl.textContent = p === G.human ? 'Você' : online() ? 'Colega' : 'Computador';
+    el.roleEl.textContent = p === 0 ? 'Sul · 1–6' : 'Norte · 7–12';
+  }
+  eventEl.textContent = G.event;
+  promptEl.textContent = G.prompt;
+  legendEl.hidden = !(G.hints && threats.size);
+  hintsBox.checked = G.hints;
+  undoBtn.hidden = online();
+  undoBtn.disabled = !canUndo();
+  $('#netStatus').hidden = !online();
+  $('#thS').textContent = G.human === 0 ? 'Sul (você)' : 'Sul';
+  $('#thN').textContent = G.human === 1 ? 'Norte (você)' : 'Norte';
+  renderLog();
+}
+
+function renderLog() {
+  const L = G.log;
+  logEmpty.hidden = L.length > 0;
+  const cell = e => (e ? `${e.casa}${e.taken ? `<span class="cap">+${e.taken}</span>` : ''}` : '');
+  let html = '';
+  for (let r = 0; r * 2 < L.length; r++) {
+    const a = 2 * r, b = a + 1;
+    html += `<tr><td class="n">${r + 1}</td><td${a === L.length - 1 ? ' class="last"' : ''}>${cell(L[a])}</td><td${b === L.length - 1 ? ' class="last"' : ''}>${cell(L[b])}</td></tr>`;
+  }
+  logBody.innerHTML = html;
+  logScroll.scrollTop = logScroll.scrollHeight;
+}
+
+/* ===== PRÉVIA (dicas) ===== */
+function preview(i) {
+  if (!G.hints || G.busy || G.over || !isHumanTurn() || !G.legal || !G.legal.moves.includes(i)) return;
+  if (online() && !NET.alive) return;
+  clearPreview();
+  const r = play(G.pos, i), last = r.path[r.path.length - 1];
+  pitEls[last].classList.add('land');
+  r.caps.forEach(c => pitEls[c].classList.add('wouldcap'));
+  eventEl.textContent = r.taken ? `Semeando a casa ${i + 1}, você colhe ${plural(r.taken, 'semente', 'sementes')}.`
+    : r.slam ? `Semeando a casa ${i + 1}, a colheita seria anulada: deixaria o adversário sem nenhuma semente.`
+    : `Semeando a casa ${i + 1}, a última semente cai na casa ${last + 1}.`;
+}
+function clearPreview() {
+  pitEls.forEach(el => el.classList.remove('land', 'wouldcap'));
+  eventEl.textContent = G.event;
+}
+
+/* ===== SOM (madeira, sintetizado) ===== */
+let ac = null, noiseBuf = null;
+function audio() {
+  if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ac = null; } }
+  if (ac && ac.state === 'suspended') ac.resume().catch(() => {});
+  return ac;
+}
+function knock() {
+  if (!G.sound) return;
+  const a = audio(); if (!a) return;
+  if (!noiseBuf) {
+    noiseBuf = a.createBuffer(1, Math.floor(a.sampleRate * .05), a.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3);
+  }
+  const t = a.currentTime, src = a.createBufferSource(), bp = a.createBiquadFilter(), g = a.createGain();
+  src.buffer = noiseBuf; bp.type = 'bandpass'; bp.frequency.value = 700 + Math.random() * 500; bp.Q.value = 6; g.gain.value = .8;
+  src.connect(bp); bp.connect(g); g.connect(a.destination); src.start(t);
+  const o = a.createOscillator(), og = a.createGain();
+  o.type = 'sine'; o.frequency.setValueAtTime(380 + Math.random() * 60, t); o.frequency.exponentialRampToValueAtTime(240, t + .06);
+  og.gain.setValueAtTime(.12, t); og.gain.exponentialRampToValueAtTime(.0001, t + .08);
+  o.connect(og); og.connect(a.destination); o.start(t); o.stop(t + .09);
+}
+function chime() {
+  if (!G.sound) return;
+  const a = audio(); if (!a) return;
+  [660, 880, 1100].forEach((f, k) => {
+    const t = a.currentTime + k * .07, o = a.createOscillator(), g = a.createGain();
+    o.type = 'triangle'; o.frequency.value = f;
+    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.12, t + .01); g.gain.exponentialRampToValueAtTime(.0001, t + .32);
+    o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + .34);
+  });
+}
+function renderSound() {
+  soundBtn.setAttribute('aria-pressed', String(G.sound));
+  soundBtn.setAttribute('aria-label', G.sound ? 'Som ligado' : 'Som desligado');
+  soundBtn.querySelectorAll('.wave').forEach(w => { w.style.display = G.sound ? '' : 'none'; });
+  soundBtn.querySelector('.mute').style.display = G.sound ? 'none' : '';
+}
+
+/* ===== ANIMAÇÃO DA SEMEADURA ===== */
+function putHand(i, dur) {
+  const r = pitEls[i].holeEl.getBoundingClientRect(), w = wrapEl.getBoundingClientRect();
+  const x = r.left - w.left + r.width / 2, y = r.top - w.top + r.height / 2;
+  handEl.style.transitionDuration = (motionOK ? dur : 0) + 'ms';
+  handEl.style.transform = `translate(${Math.round(x - handEl.offsetWidth / 2)}px,${Math.round(y - r.height / 2 - handEl.offsetHeight / 2 + 2)}px)`;
+}
+function hideHand() { handEl.hidden = true; }
+
+async function animateSow(before, res, from, gid) {
+  const disp = before.b.slice(), n = disp[from];
+  const store = before.s.slice(), p = before.turn;
+  disp[from] = 0; drawPit(from, 0);
+  let inHand = n;
+  const step = motionOK ? (n > 11 ? 105 : 165) : 20;
+  handN.textContent = inHand; handEl.hidden = false; putHand(from, 0);
+  await sleep(step * .6);
+  for (const j of res.path) {
+    if (gid !== G.gid) return false;
+    putHand(j, step * .8);
+    await sleep(step * .8);
+    if (gid !== G.gid) return false;
+    disp[j]++; inHand--; handN.textContent = inHand;
+    drawPit(j, disp[j], true); knock();
+    await sleep(step * .35);
+  }
+  hideHand();
+  if (res.caps.length) {
+    res.caps.forEach(c => pitEls[c].classList.add('harvest'));
+    chime();
+    await sleep(motionOK ? 560 : 60);
+    for (const c of res.caps.slice().reverse()) {
+      if (gid !== G.gid) return false;
+      store[p] += disp[c]; disp[c] = 0;
+      drawPit(c, 0); pitEls[c].classList.remove('harvest');
+      drawStore(p, store[p], true);
+      await sleep(motionOK ? 150 : 10);
+    }
+  }
+  return gid === G.gid;
+}
+
+/* ===== FLUXO DO JOGO ===== */
+function snap() {
+  return { pos: { b: G.pos.b.slice(), s: G.pos.s.slice(), turn: G.pos.turn }, moves: G.moves.slice(), log: G.log.slice(), reps: Object.assign({}, G.reps), quiet: G.quiet };
+}
+function canUndo() {
+  if (online() || G.busy || !G.hist.length) return false;
+  return G.hist.some(h => h.pos.turn === G.human);
+}
+function undo() {
+  if (!canUndo()) return;
+  let h;
+  do { h = G.hist.pop(); } while (h.pos.turn !== G.human);
+  Object.assign(G, { pos: h.pos, moves: h.moves, log: h.log, reps: h.reps, quiet: h.quiet, over: null });
+  G.event = 'Lance desfeito.';
+  endDlg.hidden = true;
+  startTurn(false);
+}
+
+function resetGame() {
+  G.gid++; G.busy = false; hideHand();
+  G.pos = initialPos();
+  G.moves = []; G.hist = []; G.log = []; G.reps = {}; G.quiet = 0; G.over = null; G.legal = null;
+  endDlg.hidden = true;
+}
+
+function startTurn(countRep) {
+  const pos = G.pos;
+  G.legal = null;
+  if (pos.s[0] >= 25 || pos.s[1] >= 25) return endGame('25');
+  const L = legal(pos);
+  if (!L.moves.length) return endGame(L.reason);
+  if (countRep) {
+    const key = pos.b.join(',') + '|' + pos.turn;
+    G.reps[key] = (G.reps[key] || 0) + 1;
+  }
+  if (Object.values(G.reps).some(v => v >= 3) || G.quiet >= 80) return endGame('ciclo');
+  G.legal = L;
+  render();
+  if (!isHumanTurn() && G.mode === 'ai') aiTurn();
+}
+
+function endGame(reason) {
+  const pos = G.pos;
+  if (reason !== '25') {
+    const s = pos.s.slice(); s[0] += rowSum(pos.b, 0); s[1] += rowSum(pos.b, 1);
+    G.pos = { b: Array(12).fill(0), s, turn: pos.turn };
+  }
+  G.over = { reason, mover: pos.turn };
+  G.legal = null;
+  G.prompt = online() ? 'Partida encerrada. Toque em Jogar de novo para a revanche.' : 'Partida encerrada.';
+  render();
+  const gid = G.gid;
+  setTimeout(() => { if (gid === G.gid && G.over) showEnd(); }, motionOK ? 700 : 0);
+}
+
+function showEnd() {
+  const s = G.pos.s, o = G.over, near = nearSide(), far = 1 - near;
+  const w = s[0] > s[1] ? 0 : s[1] > s[0] ? 1 : -1;
+  const title = w < 0 ? 'Empate' : w === G.human ? 'Você venceu!' : online() ? 'Seu colega venceu' : 'O computador venceu';
+  const label = p => (p === G.human ? 'Você' : online() ? 'Colega' : 'Computador');
+  $('#endTitle').textContent = title;
+  $('#endA').textContent = s[near]; $('#endAName').textContent = label(near);
+  $('#endB').textContent = s[far]; $('#endBName').textContent = label(far);
+  let why;
+  if (o.reason === '25') { const v = s[0] >= 25 ? 0 : 1; why = `${nameOf(v)} colheu ${s[v]} sementes, mais da metade das 48.`; }
+  else if (o.reason === 'fome') why = `${nameOf(o.mover)} não tinha como dar de comer ao adversário. Cada um colheu as sementes da própria fileira.`;
+  else if (o.reason === 'impasse') why = `${nameOf(o.mover)} só tinha jogadas que deixariam a partida sem continuidade. Cada um colheu as sementes da própria fileira.`;
+  else why = 'A partida ficou rodando sem colheitas. Cada um colheu as sementes da própria fileira.';
+  $('#endWhy').textContent = why;
+  endDlg.hidden = false;
+  $('#again').focus();
+}
+
+function eventText(p, i, r) {
+  let t = `${nameOf(p)} semeou a casa ${i + 1}`;
+  if (r.taken) t += ` e colheu ${plural(r.taken, 'semente', 'sementes')}`;
+  t += '.';
+  if (r.slam) t += ' A colheita foi anulada porque deixaria o adversário sem nenhuma semente.';
+  return t;
+}
+
+async function performMove(i, origin) {
+  const gid = G.gid;
+  G.busy = true;
+  clearPreview();
+  if (G.mode === 'ai') G.hist.push(snap());
+  const before = G.pos, p = before.turn, res = play(before, i);
+  G.moves.push(i);
+  if (online()) {
+    saveOnline();
+    if (origin === 'me') send({ t: 'move', n: G.moves.length, i });
+  }
+  G.prompt = p === G.human ? 'Semeando…' : online() ? 'Seu colega está semeando…' : 'O computador está semeando…';
+  render();
+  const ok = await animateSow(before, res, i, gid);
+  if (!ok || gid !== G.gid) return;
+  G.log.push({ p, casa: i + 1, taken: res.taken });
+  G.quiet = res.taken ? 0 : G.quiet + 1;
+  G.pos = res.pos;
+  G.event = eventText(p, i, res);
+  G.busy = false;
+  startTurn(true);
+  pump();
+}
+
+function humanPlay(i) {
+  if (G.busy || G.over || !isHumanTurn() || !G.legal || !G.legal.moves.includes(i)) return;
+  if (online() && !NET.alive) return;
+  if (G.sound) audio();
+  performMove(i, 'me');
+}
+
+// lance de outra pessoa (computador ou colega): destaca a casa escolhida e depois semeia
+async function playOther(i, origin) {
+  const gid = G.gid;
+  G.busy = true;
+  pitEls[i].classList.add('picked');
+  await sleep(motionOK ? 320 : 0);
+  if (gid !== G.gid) return;
+  pitEls[i].classList.remove('picked');
+  performMove(i, origin);
+}
+
+function aiTurn() {
+  const gid = G.gid;
+  G.busy = true;
+  G.prompt = 'O computador está pensando…';
+  render();
+  setTimeout(() => {
+    if (gid !== G.gid) return;
+    const t0 = performance.now();
+    const m = aiChoose(G.pos);
+    const wait = Math.max(0, (motionOK ? 520 : 0) - (performance.now() - t0));
+    setTimeout(() => { if (gid === G.gid) playOther(m, 'ai'); }, wait);
+  }, 60);
+}
+
+/* ===== QUEM COMEÇA: a semente escondida na mão ===== */
+const handBtns = Array.from(ritualEl.querySelectorAll('.handbtn'));
+let ritualMode = 'ai', ritualDone = false;
+function openRitual(mode) {
+  ritualMode = mode; ritualDone = false;
+  if (mode === 'ai') G.ritualSeed = Math.random() < .5 ? 'esq' : 'dir';
+  const lado = NET.seed === 'esq' ? 'esquerda' : 'direita';
+  $('#ritIntro').textContent = mode === 'ai' ? 'O computador escondeu uma semente numa das mãos. Acerte a mão e você começa jogando de Sul.'
+    : mode === 'guest' ? 'Seu colega escondeu uma semente numa das mãos. Acerte a mão e você começa jogando de Sul.'
+    : `Você escondeu a semente na mão ${lado}. Se o seu colega acertar, ele começa jogando de Sul.`;
+  handBtns.forEach(b => {
+    const hostSeed = mode === 'host' && b.dataset.hand === NET.seed;
+    b.disabled = mode === 'host';
+    b.classList.remove('chosen');
+    const r = b.querySelector('.reveal');
+    r.classList.toggle('has', hostSeed);
+    r.innerHTML = hostSeed ? SEED_TAG + 'a semente' : '';
+  });
+  $('#ritResult').textContent = mode === 'host' ? 'Esperando o colega escolher uma mão…' : '';
+  $('#ritGo').hidden = true;
+  ritualEl.hidden = false;
+  G.event = '';
+  G.prompt = mode === 'host' ? 'Esperando o colega escolher uma mão.' : 'Escolha uma das mãos para decidir quem começa.';
+  render();
+  if (mode !== 'host') handBtns[0].focus();
+}
+function revealRitual(seed, pick, text) {
+  ritualDone = true;
+  handBtns.forEach(b => {
+    const has = b.dataset.hand === seed;
+    b.disabled = true;
+    b.classList.toggle('chosen', b.dataset.hand === pick);
+    const r = b.querySelector('.reveal');
+    r.classList.toggle('has', has);
+    r.innerHTML = has ? SEED_TAG + 'a semente' : 'vazia';
+  });
+  $('#ritResult').textContent = text;
+  const go = $('#ritGo'); go.hidden = false; go.focus();
+  (pick === seed ? chime : knock)();
+}
+function pickHand(hand) {
+  if (ritualDone) return;
+  if (G.sound) audio();
+  if (ritualMode === 'ai') {
+    const hit = hand === G.ritualSeed;
+    G.human = hit ? 0 : 1;
+    revealRitual(G.ritualSeed, hand, hit ? 'Acertou! Você começa jogando de Sul (casas 1 a 6).'
+      : 'Não foi dessa vez. O computador começa de Sul e você joga de Norte (casas 7 a 12).');
+    G.event = hit ? 'Você acertou a mão e começa de Sul.' : 'O computador começa. Você joga de Norte.';
+  } else if (ritualMode === 'guest') {
+    ritualDone = true;
+    handBtns.forEach(b => { b.disabled = true; b.classList.toggle('chosen', b.dataset.hand === hand); });
+    $('#ritResult').textContent = 'Abrindo a mão…';
+    send({ t: 'pick', hand });
+  }
+}
+handBtns.forEach(b => b.addEventListener('click', () => pickHand(b.dataset.hand)));
+$('#ritGo').addEventListener('click', () => {
+  ritualEl.hidden = true;
+  if (ritualMode === 'ai') { layout(true); startTurn(true); }
+});
+
+function startAiGame() {
+  stopNet();
+  G.mode = 'ai';
+  resetGame();
+  G.human = 0;
+  show('game');
+  openRitual('ai');
+}
+
+/* ===== MODO ONLINE (conexão direta entre os dois aparelhos, via PeerJS) ===== */
+const loadedScripts = {};
+function loadScript(src) {
+  if (!loadedScripts[src]) {
+    loadedScripts[src] = new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = src; s.async = true;
+      s.onload = () => res();
+      s.onerror = () => { delete loadedScripts[src]; s.remove(); rej(new Error('load')); };
+      document.head.appendChild(s);
+    });
+  }
+  return loadedScripts[src];
+}
+const mySide = () => (NET.sul === NET.role ? 0 : 1);
+const newCode = () => String(1000 + Math.floor(Math.random() * 9000));
+const gameLink = () => `${location.origin}${location.pathname}?sala=${NET.code}`;
+function later(fn, ms) { const gen = NET.gen; setTimeout(() => { if (gen === NET.gen) fn(); }, ms); }
+
+function send(msg) {
+  const c = NET.conn;
+  if (c && c.open) { try { c.send(msg); } catch (e) { /* conexão caiu: o heartbeat percebe */ } }
+}
+function netUI(kind, text) {
+  NET.ui = { kind, text };
+  ['lobbyStatus', 'joinStatus', 'netStatus'].forEach(id => {
+    const el = $('#' + id);
+    el.className = 'net ' + kind;
+    el.querySelector('span').textContent = text;
+  });
+  if (G.screen === 'game' && !G.busy) render();
+}
+function saveOnline() {
+  if (!online()) return;
+  try { localStorage.setItem('awele-online', JSON.stringify({ role: NET.role, code: NET.code, sul: NET.sul, moves: G.moves, guestToken: NET.guestToken, ts: Date.now() })); } catch (e) {}
+}
+function readOnline() {
+  try {
+    const d = JSON.parse(localStorage.getItem('awele-online') || 'null');
+    if (d && /^\d{4}$/.test(d.code) && Date.now() - d.ts < 12 * 3600e3 && Array.isArray(d.moves)) return d;
+  } catch (e) {}
+  return null;
+}
+function clearOnline() { try { localStorage.removeItem('awele-online'); } catch (e) {} }
+function deviceToken() {
+  let t = null;
+  try { t = localStorage.getItem('awele-token'); } catch (e) {}
+  if (!t) { t = Math.random().toString(36).slice(2, 12); try { localStorage.setItem('awele-token', t); } catch (e) {} }
+  return t;
+}
+
+function stopNet() {
+  NET.gen++;
+  if (NET.beat) clearInterval(NET.beat);
+  if (NET.retry) clearTimeout(NET.retry);
+  NET.beat = null; NET.retry = null;
+  try { if (NET.conn) NET.conn.close(); } catch (e) {}
+  try { if (NET.peer) NET.peer.destroy(); } catch (e) {}
+  NET.peer = null; NET.conn = null; NET.alive = false; NET.inbox = [];
+}
+function startBeat() {
+  if (NET.beat) clearInterval(NET.beat);
+  NET.beat = setInterval(() => {
+    if (NET.conn && NET.conn.open) send({ t: 'ping' });
+    if (NET.alive && Date.now() - NET.lastSeen > 13000) {
+      NET.alive = false;
+      if (NET.role === 'guest') { netUI('bad', 'Conexão perdida. Tentando reconectar…'); reconnectGuest(); }
+      else netUI('bad', 'Seu colega perdeu a conexão. Esperando ele voltar…');
+    }
+  }, 4000);
+}
+
+// --- quem cria a partida (anfitrião) ---
+async function hostGame(saved) {
+  stopNet();
+  G.mode = 'online'; NET.role = 'host'; NET.alive = false; NET.attempts = 0;
+  resetGame();
+  if (saved) {
+    NET.code = saved.code; NET.sul = saved.sul; NET.guestToken = saved.guestToken || null;
+  } else {
+    NET.code = newCode(); NET.sul = null; NET.guestToken = null;
+  }
+  if (NET.sul && validMoves(saved.moves)) {
+    applyMoves(saved.moves, true);
+  } else {
+    NET.sul = null;
+    renderLobby();
+    show('lobby');
+  }
+  saveOnline();
+  netUI('wait', 'Abrindo a partida…');
+  try { await loadScript(PEERJS); }
+  catch (e) { netUI('bad', 'Não consegui carregar o modo online. Confira a internet e tente de novo.'); return; }
+  startBeat();
+  openHostPeer();
+}
+function renderLobby() {
+  $('#digits').innerHTML = NET.code.split('').map(d => `<b>${d}</b>`).join('');
+  $('#linkOut').textContent = gameLink();
+  renderQR(gameLink());
+}
+async function renderQR(text) {
+  const box = $('#qr');
+  box.textContent = 'Gerando QR Code…';
+  try { await loadScript(QRLIB); } catch (e) { box.textContent = 'QR Code indisponível sem internet. Use o número.'; return; }
+  const qr = window.qrcode(0, 'M'); qr.addData(text); qr.make();
+  const n = qr.getModuleCount(), m = 2, size = n + m * 2;
+  let d = '';
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) d += `M${c + m} ${r + m}h1v1h-1z`;
+  box.innerHTML = `<svg viewBox="0 0 ${size} ${size}" shape-rendering="crispEdges" role="img" aria-label="QR Code da partida ${NET.code}"><path d="${d}" fill="currentColor"/></svg>`;
+}
+function openHostPeer() {
+  const gen = NET.gen;
+  let peer;
+  try { peer = new window.Peer(ID_PREFIX + NET.code, { debug: 0 }); }
+  catch (e) { netUI('bad', 'Este navegador não suporta o modo online. Tente o Chrome ou o Safari atualizados.'); return; }
+  NET.peer = peer;
+  peer.on('open', () => {
+    if (gen !== NET.gen) return;
+    NET.attempts = 0;
+    if (!NET.alive) netUI('wait', NET.sul ? 'Esperando o seu colega voltar…' : 'Esperando o seu colega entrar…');
+  });
+  peer.on('connection', conn => { if (gen === NET.gen) acceptConn(conn); });
+  peer.on('disconnected', () => { if (gen === NET.gen && !peer.destroyed) later(() => { try { peer.reconnect(); } catch (e) {} }, 1500); });
+  peer.on('error', err => {
+    if (gen !== NET.gen) return;
+    const type = err && err.type;
+    if (type === 'unavailable-id') {
+      try { peer.destroy(); } catch (e) {}
+      NET.attempts++;
+      if (!NET.sul && !G.moves.length && G.screen === 'lobby') { NET.code = newCode(); saveOnline(); renderLobby(); later(openHostPeer, 300); return; }
+      if (NET.attempts > 25) { netUI('bad', 'Não consegui reabrir a partida. Volte e crie outra.'); return; }
+      netUI('wait', 'Reabrindo a partida…');
+      later(openHostPeer, 3000);
+      return;
+    }
+    if (type === 'browser-incompatible') { netUI('bad', 'Este navegador não suporta o modo online. Tente o Chrome ou o Safari atualizados.'); return; }
+    if (type === 'peer-unavailable') return;
+    if (['network', 'server-error', 'socket-error', 'socket-closed', 'ssl-unavailable'].includes(type)) {
+      netUI('bad', 'Sem conexão com a internet. Tentando de novo…');
+      try { peer.destroy(); } catch (e) {}
+      later(openHostPeer, 4000);
+    }
+  });
+}
+function acceptConn(conn) {
+  conn.on('data', d => onHostData(conn, d));
+  conn.on('close', () => {
+    if (conn !== NET.conn) return;
+    NET.alive = false;
+    netUI('bad', 'Seu colega saiu ou perdeu a conexão. Esperando ele voltar…');
+  });
+  conn.on('error', () => {});
+}
+function onHostData(conn, msg) {
+  if (!msg || typeof msg !== 'object') return;
+  if (msg.t === 'hello') {
+    const old = NET.conn;
+    const oldAlive = old && old !== conn && old.open && Date.now() - NET.lastSeen < 13000;
+    if (oldAlive && NET.guestToken && msg.token !== NET.guestToken) {
+      try { conn.send({ t: 'full' }); } catch (e) {}
+      setTimeout(() => { try { conn.close(); } catch (e) {} }, 400);
+      return;
+    }
+    if (old && old !== conn) { try { old.close(); } catch (e) {} }
+    NET.conn = conn; NET.guestToken = typeof msg.token === 'string' ? msg.token.slice(0, 20) : null;
+    NET.lastSeen = Date.now(); NET.alive = true;
+    netUI('ok', `Conectado com o seu colega · partida ${NET.code}`);
+    reconcile(msg);
+    if (!NET.sul) startHostRitual();
+    else send({ t: 'state', moves: G.moves, sul: NET.sul });
+    saveOnline();
+    return;
+  }
+  if (conn !== NET.conn) return;
+  NET.lastSeen = Date.now();
+  if (!NET.alive) { NET.alive = true; netUI('ok', `Conectado com o seu colega · partida ${NET.code}`); }
+  receive(msg);
+}
+function startHostRitual() {
+  resetGame();
+  NET.sul = null;
+  NET.seed = Math.random() < .5 ? 'esq' : 'dir';
+  saveOnline();
+  send({ t: 'ritual' });
+  show('game');
+  openRitual('host');
+}
+function resolvePick(hand) {
+  if (hand !== 'esq' && hand !== 'dir') return;
+  const m = { t: 'start', sul: hand === NET.seed ? 'guest' : 'host', seed: NET.seed, pick: hand };
+  send(m);
+  applyStart(m);
+}
+
+// --- quem entra na partida (convidado) ---
+async function joinGame(code, saved) {
+  stopNet();
+  G.mode = 'online'; NET.role = 'guest'; NET.code = code; NET.alive = false; NET.token = deviceToken();
+  resetGame();
+  NET.sul = null;
+  try { history.replaceState(null, '', `${location.pathname}?sala=${code}`); } catch (e) {}
+  if (saved && saved.code === code && saved.role === 'guest' && saved.sul && validMoves(saved.moves)) {
+    NET.sul = saved.sul;
+    applyMoves(saved.moves, true);
+  } else {
+    $('#codeIn').value = code;
+    show('join');
+  }
+  saveOnline();
+  netUI('wait', `Procurando a partida ${code}…`);
+  try { await loadScript(PEERJS); }
+  catch (e) { netUI('bad', 'Não consegui carregar o modo online. Confira a internet e tente de novo.'); return; }
+  startBeat();
+  startGuestPeer();
+}
+function startGuestPeer() {
+  const gen = NET.gen;
+  let peer;
+  try { peer = new window.Peer({ debug: 0 }); }
+  catch (e) { netUI('bad', 'Este navegador não suporta o modo online. Tente o Chrome ou o Safari atualizados.'); return; }
+  NET.peer = peer;
+  peer.on('open', () => { if (gen === NET.gen) connectToHost(); });
+  peer.on('disconnected', () => { if (gen === NET.gen && !peer.destroyed) later(() => { try { peer.reconnect(); } catch (e) {} }, 1500); });
+  peer.on('error', err => {
+    if (gen !== NET.gen) return;
+    const type = err && err.type;
+    if (type === 'peer-unavailable') {
+      if (NET.sul || G.screen === 'game') { netUI('bad', 'Seu colega está fora do jogo agora. Tentando de novo…'); reconnectGuest(5000); }
+      else { netUI('bad', `Não achei a partida ${NET.code}. Confira o número com o seu colega.`); stopNet(); }
+      return;
+    }
+    if (type === 'browser-incompatible') { netUI('bad', 'Este navegador não suporta o modo online. Tente o Chrome ou o Safari atualizados.'); return; }
+    if (['network', 'server-error', 'socket-error', 'socket-closed', 'ssl-unavailable'].includes(type)) {
+      netUI('bad', 'Sem conexão com a internet. Tentando de novo…');
+      try { peer.destroy(); } catch (e) {}
+      later(startGuestPeer, 4000);
+    }
+  });
+}
+function connectToHost() {
+  if (!NET.peer || NET.peer.destroyed) return;
+  if (NET.conn) { try { NET.conn.close(); } catch (e) {} }
+  const conn = NET.peer.connect(ID_PREFIX + NET.code, { reliable: true, serialization: 'json' });
+  NET.conn = conn;
+  conn.on('open', () => {
+    if (conn !== NET.conn) return;
+    NET.lastSeen = Date.now(); NET.alive = true;
+    send({ t: 'hello', token: NET.token, moves: G.moves, sul: NET.sul });
+    netUI('ok', `Conectado com o seu colega · partida ${NET.code}`);
+  });
+  conn.on('data', d => {
+    if (conn !== NET.conn) return;
+    NET.lastSeen = Date.now();
+    if (!NET.alive) { NET.alive = true; netUI('ok', `Conectado com o seu colega · partida ${NET.code}`); }
+    receive(d);
+  });
+  conn.on('close', () => {
+    if (conn !== NET.conn) return;
+    NET.alive = false;
+    netUI('bad', 'Conexão perdida. Tentando reconectar…');
+    reconnectGuest();
+  });
+  conn.on('error', () => {});
+}
+function reconnectGuest(ms) {
+  if (NET.role !== 'guest' || NET.retry) return;
+  const gen = NET.gen;
+  NET.retry = setTimeout(() => {
+    NET.retry = null;
+    if (gen !== NET.gen || NET.role !== 'guest') return;
+    if (!NET.peer || NET.peer.destroyed) { startGuestPeer(); return; }
+    if (NET.peer.disconnected) { try { NET.peer.reconnect(); } catch (e) {} reconnectGuest(); return; }
+    if (NET.conn && NET.conn.open && NET.alive) return;
+    connectToHost();
+  }, ms || 2500);
+}
+
+// --- mensagens (os dois lados) ---
+function receive(msg) {
+  if (!msg || typeof msg !== 'object' || typeof msg.t !== 'string') return;
+  if (msg.t === 'ping') return;
+  if (msg.t === 'full') { stopNet(); netUI('bad', 'Essa partida já tem dois jogadores.'); show('join'); return; }
+  if (msg.t === 'bye') {
+    NET.alive = false;
+    netUI('bad', NET.role === 'guest' ? 'Seu colega encerrou a partida.' : 'Seu colega saiu da partida. Ele pode voltar pelo mesmo número.');
+    return;
+  }
+  NET.inbox.push(msg);
+  pump();
+}
+function pump() {
+  while (NET.inbox.length && !G.busy) handleMsg(NET.inbox.shift());
+}
+function handleMsg(m) {
+  switch (m.t) {
+    case 'ritual':
+      if (NET.role !== 'guest') return;
+      if (!NET.sul && !ritualEl.hidden && ritualMode === 'guest' && !ritualDone) return;
+      resetGame(); NET.sul = null; saveOnline();
+      show('game'); openRitual('guest');
+      return;
+    case 'pick':
+      if (NET.role === 'host' && !NET.sul) resolvePick(m.hand);
+      return;
+    case 'start':
+      if (NET.role === 'guest') applyStart(m);
+      return;
+    case 'state':
+      reconcile(m);
+      return;
+    case 'need':
+      send({ t: 'state', moves: G.moves, sul: NET.sul });
+      return;
+    case 'move':
+      applyRemoteMove(m);
+      return;
+    case 'rematch':
+      if (NET.role === 'host') { if (NET.sul) startHostRitual(); else send({ t: 'ritual' }); }
+      return;
+  }
+}
+function applyStart(m) {
+  if (m.sul !== 'host' && m.sul !== 'guest') return;
+  resetGame();
+  NET.sul = m.sul;
+  G.human = mySide();
+  saveOnline();
+  const hit = m.pick === m.seed;
+  const text = NET.role === 'guest'
+    ? (hit ? 'Acertou! Você começa jogando de Sul (casas 1 a 6).' : 'Não foi dessa vez. Seu colega começa de Sul e você joga de Norte (casas 7 a 12).')
+    : (hit ? 'Seu colega acertou e começa de Sul. Você joga de Norte (casas 7 a 12).' : 'Seu colega errou! Você começa jogando de Sul (casas 1 a 6).');
+  show('game');
+  if (ritualEl.hidden) openRitual(NET.role);
+  revealRitual(m.seed, m.pick, text);
+  G.event = G.human === 0 ? 'Você começa jogando de Sul.' : 'Seu colega começa jogando de Sul.';
+  startTurn(true);
+}
+function isPrefix(a, b) {
+  if (a.length > b.length) return false;
+  for (let k = 0; k < a.length; k++) if (a[k] !== b[k]) return false;
+  return true;
+}
+// junta o que cada aparelho sabe da partida: vale a lista de lances mais completa (em conflito, vale a do anfitrião)
+function reconcile(r) {
+  const rs = r.sul === 'host' || r.sul === 'guest' ? r.sul : null;
+  const rm = Array.isArray(r.moves) ? r.moves : [];
+  if (!rs || !validMoves(rm)) return;
+  let adopt = false;
+  if (!NET.sul) adopt = true;
+  else if (rs === NET.sul) {
+    if (isPrefix(G.moves, rm)) adopt = rm.length > G.moves.length;
+    else if (!isPrefix(rm, G.moves)) adopt = NET.role === 'guest';
+  } else adopt = NET.role === 'guest';
+  if (adopt) { NET.sul = rs; applyMoves(rm, false); }
+  else if (NET.role === 'guest' && rs === NET.sul && G.moves.length > rm.length && isPrefix(rm, G.moves)) {
+    send({ t: 'state', moves: G.moves, sul: NET.sul });
+  }
+}
+function applyMoves(list, silent) {
+  G.gid++; G.busy = false; hideHand();
+  const R = rebuild(list);
+  Object.assign(G, { moves: list.slice(), pos: R.pos, log: R.log, reps: R.reps, quiet: R.quiet, over: null, hist: [], legal: null });
+  G.human = mySide();
+  G.event = silent || !list.length ? '' : 'Partida sincronizada com o seu colega.';
+  ritualEl.hidden = true; endDlg.hidden = true;
+  saveOnline();
+  show('game');
+  layout(true);
+  startTurn(false);
+}
+function applyRemoteMove(m) {
+  const n = m.n, i = m.i;
+  if (!Number.isInteger(n) || !Number.isInteger(i)) return;
+  if (n <= G.moves.length) return;
+  if (n > G.moves.length + 1 || !NET.sul || G.over || !G.legal || isHumanTurn() || !G.legal.moves.includes(i)) {
+    send({ t: 'need' });
+    return;
+  }
+  playOther(i, 'remote');
+}
+
+function leaveGame() {
+  G.gid++; G.busy = false; hideHand();
+  ritualEl.hidden = true; endDlg.hidden = true;
+  if (online()) {
+    send({ t: 'bye' });
+    setTimeout(stopNet, 300);
+    clearOnline();
+  }
+  G.mode = 'ai';
+  try { history.replaceState(null, '', location.pathname); } catch (e) {}
+  show('home');
+  refreshResume();
+}
+
+/* ===== BOTÕES ===== */
+function refreshResume() {
+  const s = readOnline(), b = $('#resume');
+  b.hidden = !s;
+  if (s) b.textContent = `Voltar para a partida ${s.code}`;
+}
+$('#goCreate').addEventListener('click', () => { if (G.sound) audio(); hostGame(null); });
+$('#goJoin').addEventListener('click', () => {
+  stopNet();
+  $('#joinStatus').className = 'net'; $('#joinStatus span').textContent = '';
+  show('join');
+  $('#codeIn').focus();
+});
+$('#goRules').addEventListener('click', () => { rulesDlg.hidden = false; rulesDlg.querySelector('[data-close]').focus(); });
+$('#openRules').addEventListener('click', () => { rulesDlg.hidden = false; rulesDlg.querySelector('[data-close]').focus(); });
+$('#goAi').addEventListener('click', () => { if (G.sound) audio(); startAiGame(); });
+$('#resume').addEventListener('click', () => {
+  const s = readOnline();
+  if (!s) return refreshResume();
+  if (s.role === 'host') hostGame(s); else joinGame(s.code, s);
+});
+$('#lobbyBack').addEventListener('click', () => { stopNet(); clearOnline(); G.mode = 'ai'; show('home'); refreshResume(); });
+$('#joinBack').addEventListener('click', () => {
+  stopNet(); G.mode = 'ai';
+  try { history.replaceState(null, '', location.pathname); } catch (e) {}
+  show('home'); refreshResume();
+});
+$('#codeIn').addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4); });
+$('#joinForm').addEventListener('submit', e => {
+  e.preventDefault();
+  if (G.sound) audio();
+  const code = $('#codeIn').value.replace(/\D/g, '');
+  if (code.length !== 4) { netUI('bad', 'O número da partida tem 4 dígitos.'); return; }
+  const s = readOnline();
+  joinGame(code, s && s.role === 'guest' && s.code === code ? s : null);
+});
+$('#shareLink').addEventListener('click', async () => {
+  const link = gameLink();
+  if (navigator.share) {
+    try { await navigator.share({ title: 'Mancala Awelé', text: `Bora jogar Awelé? Entra na partida ${NET.code}:`, url: link }); return; }
+    catch (e) { if (e && e.name === 'AbortError') return; }
+  }
+  try { await navigator.clipboard.writeText(link); $('#shareLink').textContent = 'Link copiado!'; }
+  catch (e) {
+    const r = document.createRange(); r.selectNodeContents($('#linkOut'));
+    const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+    $('#shareLink').textContent = 'Link selecionado: copie';
+  }
+  setTimeout(() => { $('#shareLink').textContent = 'Enviar link'; }, 2500);
+});
+let leaveArmed = null;
+leaveBtn.addEventListener('click', () => {
+  if (leaveArmed) { clearTimeout(leaveArmed); leaveArmed = null; leaveBtn.textContent = 'Sair'; leaveBtn.classList.remove('warn'); leaveGame(); return; }
+  leaveBtn.textContent = 'Toque de novo para sair';
+  leaveBtn.classList.add('warn');
+  leaveArmed = setTimeout(() => { leaveArmed = null; leaveBtn.textContent = 'Sair'; leaveBtn.classList.remove('warn'); }, 3000);
+});
+$('#again').addEventListener('click', () => {
+  endDlg.hidden = true;
+  if (!online()) { startAiGame(); return; }
+  if (NET.role === 'host') startHostRitual();
+  else { send({ t: 'rematch' }); G.prompt = 'Pedindo a revanche ao seu colega…'; G.event = ''; promptEl.textContent = G.prompt; eventEl.textContent = ''; }
+});
+document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => { b.closest('.overlay').hidden = true; }));
+[rulesDlg, endDlg].forEach(o => o.addEventListener('click', e => { if (e.target === o) o.hidden = true; }));
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { rulesDlg.hidden = true; endDlg.hidden = true; } });
+undoBtn.addEventListener('click', undo);
+hintsBox.addEventListener('change', () => { G.hints = hintsBox.checked; savePrefs(); clearPreview(); render(); });
+soundBtn.addEventListener('click', () => { G.sound = !G.sound; savePrefs(); renderSound(); if (G.sound) { audio(); knock(); } });
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible' || !online() || !NET.peer) return;
+  if (NET.peer.disconnected && !NET.peer.destroyed) { try { NET.peer.reconnect(); } catch (e) {} }
+  if (NET.role === 'guest') {
+    if (NET.conn && NET.conn.open) send({ t: 'hello', token: NET.token, moves: G.moves, sul: NET.sul });
+    else reconnectGuest(500);
+  }
+});
+
+/* ===== INÍCIO ===== */
+loadPrefs();
+renderSound();
+buildDeco();
+if (window.ResizeObserver) new ResizeObserver(() => requestAnimationFrame(() => layout(false))).observe(wrapEl);
+window.addEventListener('resize', () => layout(false));
+const sala = (new URLSearchParams(location.search).get('sala') || '').replace(/\D/g, '').slice(0, 4);
+if (sala.length === 4) {
+  const s = readOnline();
+  joinGame(sala, s && s.role === 'guest' && s.code === sala ? s : null);
+} else {
+  show('home');
+  refreshResume();
+}
+})();
+</script>
+</body>
+</html>
