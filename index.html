@@ -36,6 +36,8 @@
   --skin-2:#996645;
   --skin-3:#a8744f;
   --skin-line:#2a160b;
+  --pit:radial-gradient(circle at 50% 40%,#1f0e07 0%,#2d160b 44%,#43220f 72%,#58301a 85%,#80502e 93%,#4a2713 100%);
+  --trough:radial-gradient(ellipse at 50% 42%,#1f0e07 0%,#2d160b 48%,#43220f 78%,#58301a 88%,#80502e 95%,#4a2713 100%);
   --f-display:"Tilt Warp","Arial Rounded MT Bold","Trebuchet MS",system-ui,sans-serif;
   --f-body:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --f-mono:"DM Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;
@@ -57,7 +59,13 @@ button,input{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 
 /* faixa de tecido no topo: xadrez índigo e branco dos panos baoulê */
-.weave{height:10px;background:conic-gradient(#d9d3c1 25%,#2c3a6e 0 50%,#d9d3c1 0 75%,#2c3a6e 0) 0 0/10px 10px;opacity:.85;box-shadow:0 1px 0 rgba(0,0,0,.45)}
+.weave{height:20px;box-shadow:0 1px 0 rgba(0,0,0,.5),0 4px 12px rgba(0,0,0,.28);
+  background:
+    repeating-linear-gradient(90deg,transparent 0 58px,rgba(234,176,63,.9) 58px 60px,transparent 60px 62px,rgba(234,176,63,.9) 62px 64px,transparent 64px 120px),
+    repeating-linear-gradient(90deg,#22305c 0 60px,transparent 60px 120px) 0 8px/100% 12px no-repeat,
+    repeating-linear-gradient(90deg,#d9d3c1 0 2px,#33437a 2px 5px) 0 8px/100% 12px no-repeat,
+    conic-gradient(#d9d3c1 25%,#2c3a6e 0 50%,#d9d3c1 0 75%,#2c3a6e 0) 0 0/8px 8px repeat-x,
+    #2c3a6e}
 
 .app{max-width:1260px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 32px}
 .top{display:flex;align-items:center;justify-content:space-between;gap:10px 16px;flex-wrap:wrap;padding-block:14px}
@@ -84,11 +92,24 @@ body[data-screen="home"] .top .brand{visibility:hidden}
 .deco{display:grid;grid-template-columns:1.15fr repeat(6,1fr) 1.15fr;grid-template-rows:repeat(2,auto);gap:clamp(4px,1.2vw,8px);padding:clamp(8px,2.2vw,14px);border-radius:999px;
   background-color:var(--wood);background-image:linear-gradient(180deg,rgba(255,222,186,.1),rgba(0,0,0,.16) 60%,rgba(0,0,0,.26)),var(--grain,none);background-size:cover;
   box-shadow:inset 0 2px 0 rgba(255,230,200,.2),inset 0 -8px 14px rgba(0,0,0,.35),0 22px 44px rgba(5,8,20,.55)}
-.deco .dh,.deco .ds{position:relative;background:radial-gradient(circle at 50% 40%,#1f0e07 0%,#2d160b 46%,#43220f 80%,#58301a 100%);box-shadow:inset 0 4px 7px rgba(0,0,0,.72),0 1px 0 rgba(255,226,190,.16)}
-.deco .dh{aspect-ratio:1;border-radius:50%}
-.deco .ds{grid-row:1/span 2;border-radius:999px}
-.deco .seed{width:21%;height:auto;aspect-ratio:1/.86}
-.deco .ds .seed{width:17%}
+.deco{transition:opacity .6s ease}
+.deco.fade{opacity:.2}
+.deco .dh,.deco .ds{position:relative;box-shadow:inset 0 4px 7px rgba(0,0,0,.72),0 1px 0 rgba(255,226,190,.16);transition:box-shadow .2s ease}
+.deco .dh{aspect-ratio:1;border-radius:50%;background:var(--pit)}
+.deco .ds{grid-row:1/span 2;border-radius:999px;background:var(--trough)}
+.deco .dh.pick{box-shadow:inset 0 4px 7px rgba(0,0,0,.72),0 0 0 2px var(--gold),0 0 14px var(--gold-glow)}
+.deco .dh.harvest{box-shadow:inset 0 4px 7px rgba(0,0,0,.72),0 0 0 2px var(--gold),0 0 22px rgba(234,176,63,.75)}
+.deco .seed,.mini-board .seed{width:calc(21% * var(--k,1) * var(--f,1));height:auto;aspect-ratio:1/var(--a,.86)}
+.deco .ds .seed,.mini-board .ms .seed{width:calc(17% * var(--k,1))}
+.hero-title{animation:rise .9s cubic-bezier(.2,.8,.2,1) both}
+.lede{animation:rise .9s .12s cubic-bezier(.2,.8,.2,1) both}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}}
+/* símbolos adinkra (povos akan) como ornamento */
+.adinkra{display:flex;align-items:center;justify-content:center;gap:16px;color:var(--gold);margin-top:-4px}
+.adinkra::before,.adinkra::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(234,176,63,.5))}
+.adinkra::after{background:linear-gradient(90deg,rgba(234,176,63,.5),transparent)}
+.adinkra svg{width:22px;height:22px;flex:none;opacity:.88;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linejoin:round;stroke-linecap:round}
+.adinkra-cap{margin:-14px 0 0;font-size:12px;color:var(--ink-3);text-align:center}
 .menu{display:grid;gap:10px}
 .choice{display:grid;grid-template-columns:50px minmax(0,1fr);align-items:center;column-gap:14px;text-align:left;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:rgba(28,36,70,.7);cursor:pointer;transition:border-color .15s,background .15s}
 .choice:hover{border-color:rgba(234,176,63,.65);background:rgba(39,50,94,.8)}
@@ -140,16 +161,25 @@ body[data-screen="home"] .top .brand{visibility:hidden}
 .board{
   --hole:90px;
   --carve:inset 0 calc(var(--hole)*.1) calc(var(--hole)*.15) rgba(0,0,0,.72),inset 0 -2px 2px rgba(255,214,170,.14),0 1px 0 rgba(255,226,190,.16);
-  display:grid;gap:var(--gap,6px);padding:var(--pad,16px);
+  display:grid;padding:var(--pad,16px);
   border-radius:calc(var(--hole)*.62);
   background-color:var(--wood);
-  background-image:linear-gradient(180deg,rgba(255,222,186,.1),rgba(0,0,0,.16) 60%,rgba(0,0,0,.26)),var(--grain,none);
+  background-image:linear-gradient(180deg,rgba(255,222,186,.12),rgba(0,0,0,.14) 55%,rgba(0,0,0,.28)),var(--grain,none);
   background-size:cover;
-  box-shadow:inset 0 2px 0 rgba(255,230,200,.2),inset 0 -10px 18px rgba(0,0,0,.35),inset 0 0 0 1px rgba(0,0,0,.4),0 26px 54px rgba(5,8,20,.6),0 4px 10px rgba(5,8,20,.4);
+  box-shadow:
+    inset 0 3px 0 rgba(255,230,200,.22),inset 0 -5px 0 rgba(0,0,0,.28),inset 0 0 0 6px rgba(0,0,0,.1),inset 0 -14px 22px rgba(0,0,0,.3),
+    0 0 0 3px #3f2211,0 0 0 4px rgba(255,214,170,.14),
+    0 30px 60px rgba(5,8,20,.62),0 6px 14px rgba(5,8,20,.45);
   user-select:none;-webkit-user-select:none;touch-action:manipulation;
 }
-.board.h{grid-template-columns:var(--sw) repeat(6,var(--cw)) var(--sw);grid-template-rows:repeat(2,var(--ch))}
-.board.v{grid-template-columns:repeat(2,var(--cw));grid-template-rows:var(--sh) repeat(6,var(--ch)) var(--sh)}
+.board.h{grid-template-columns:var(--sw) repeat(6,var(--cw)) var(--sw);grid-template-rows:repeat(2,var(--ch));column-gap:var(--gap,6px);row-gap:var(--mid,16px)}
+.board.v{grid-template-columns:repeat(2,var(--cw));grid-template-rows:var(--sh) repeat(6,var(--ch)) var(--sh);row-gap:var(--gap,6px);column-gap:var(--mid,14px)}
+/* friso entalhado entre as duas fileiras */
+.groove{pointer-events:none;border-radius:999px;box-shadow:inset 0 2px 3px rgba(0,0,0,.5),0 1px 0 rgba(255,226,190,.14);background-color:rgba(0,0,0,.18)}
+.board.h .groove{grid-row:1/span 2;grid-column:2/span 6;align-self:center;height:10px;margin-inline:4px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='10'%3E%3Cpath d='M1 5 7 1.5 13 5 7 8.5Z' fill='none' stroke='%23ffd9b0' stroke-opacity='.32' stroke-width='1.1'/%3E%3C/svg%3E");background-repeat:repeat-x;background-position:center}
+.board.v .groove{grid-column:1/span 2;grid-row:2/span 6;justify-self:center;width:10px;margin-block:4px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='14'%3E%3Cpath d='M5 1 8.5 7 5 13 1.5 7Z' fill='none' stroke='%23ffd9b0' stroke-opacity='.32' stroke-width='1.1'/%3E%3C/svg%3E");background-repeat:repeat-y;background-position:center}
 
 .pit{appearance:none;border:0;background:none;padding:0;margin:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;gap:3px;cursor:default;-webkit-tap-highlight-color:transparent}
 .board.h .pit.near{flex-direction:column-reverse}
@@ -158,7 +188,7 @@ body[data-screen="home"] .top .brand{visibility:hidden}
 .board.v .pit.far{flex-direction:row-reverse}
 .pit:focus-visible{outline:none}
 .hole{position:relative;flex:none;width:var(--hole);height:var(--hole);border-radius:50%;
-  background:radial-gradient(circle at 50% 40%,#1f0e07 0%,#2d160b 46%,#43220f 80%,#58301a 100%);
+  background:var(--pit);
   box-shadow:var(--carve);transition:box-shadow .18s ease}
 .seeds{position:absolute;inset:0;pointer-events:none}
 .pit .seeds{--sz:calc(var(--hole)*.2*var(--f,1))}
@@ -167,20 +197,27 @@ body[data-screen="home"] .top .brand{visibility:hidden}
 .cnt .krou{font:700 8px/1 var(--f-body);letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
 
 .pit.legal{cursor:pointer}
-.pit.legal .hole{box-shadow:var(--carve),0 0 0 2px rgba(234,176,63,.5)}
-@media (hover:hover){.pit.legal:hover .hole{box-shadow:var(--carve),0 0 0 3px var(--gold),0 0 18px var(--gold-glow)}}
-.pit.legal:focus-visible .hole,.pit.picked .hole{box-shadow:var(--carve),0 0 0 3px var(--gold),0 0 18px var(--gold-glow)}
+.pit.legal .hole{box-shadow:var(--carve),0 0 0 2px rgba(234,176,63,.5);animation:breathe 2.4s ease-in-out infinite}
+@keyframes breathe{0%,100%{box-shadow:var(--carve),0 0 0 2px rgba(234,176,63,.32)}50%{box-shadow:var(--carve),0 0 0 3px rgba(234,176,63,.72),0 0 14px rgba(234,176,63,.22)}}
+@media (hover:hover){.pit.legal:hover .hole{box-shadow:var(--carve),0 0 0 3px var(--gold),0 0 18px var(--gold-glow);animation:none}}
+.pit.legal:focus-visible .hole,.pit.picked .hole{box-shadow:var(--carve),0 0 0 3px var(--gold),0 0 18px var(--gold-glow);animation:none}
+.pit.lastmove .num{color:var(--gold);font-weight:500;text-decoration:underline;text-underline-offset:3px}
 .pit.locked .seeds{opacity:.42}
 .pit.threat .hole::after{content:"";position:absolute;inset:-5px;border-radius:50%;border:2px dashed var(--threat);pointer-events:none}
 .pit.land .hole::before{content:"";position:absolute;inset:-4px;border-radius:50%;border:2px dotted var(--engrave);pointer-events:none}
-.pit.wouldcap .hole{box-shadow:var(--carve),0 0 0 3px var(--gold),0 0 16px var(--gold-glow)}
-.pit.harvest .hole{box-shadow:var(--carve),0 0 0 3px var(--gold),0 0 28px rgba(234,176,63,.75)}
+.pit.wouldcap .hole{box-shadow:var(--carve),0 0 0 3px var(--gold),0 0 16px var(--gold-glow);animation:none}
+.pit.harvest .hole{box-shadow:var(--carve),0 0 0 3px var(--gold),0 0 28px rgba(234,176,63,.75);animation:none}
 .pit.harvest .seed{filter:brightness(1.35) sepia(.45)}
 
-.seed{position:absolute;width:var(--sz);height:calc(var(--sz)*.86);border-radius:50%;
+/* semente de Caesalpinia: cinza, lisa e brilhante; cada uma com tamanho e formato um pouco diferentes */
+.seed{position:absolute;width:calc(var(--sz)*var(--k,1));height:calc(var(--sz)*var(--k,1)*var(--a,.86));border-radius:50%;
   transform:translate(-50%,-50%) rotate(var(--r,0deg));
-  background:radial-gradient(circle at 34% 30%,rgba(255,255,255,.62) 0,rgba(255,255,255,.14) 18%,rgba(255,255,255,0) 34%),radial-gradient(circle at 62% 72%,rgba(0,0,0,.3),rgba(0,0,0,0) 58%),var(--c,#a9afa5);
-  box-shadow:0 1px 1.5px rgba(0,0,0,.6),inset 0 0 0 .5px rgba(0,0,0,.25)}
+  background:
+    radial-gradient(circle at 33% 28%,rgba(255,255,255,.75) 0,rgba(255,255,255,.18) 16%,rgba(255,255,255,0) 32%),
+    radial-gradient(circle at 70% 40%,rgba(60,50,40,.22) 0 6%,transparent 7%),
+    radial-gradient(circle at 62% 74%,rgba(0,0,0,.34),rgba(0,0,0,0) 60%),
+    var(--c,#a9afa5);
+  box-shadow:0 1.5px 2px rgba(0,0,0,.62),inset 0 -1px 1px rgba(0,0,0,.28),inset 0 0 0 .5px rgba(0,0,0,.25)}
 .seed.drop{animation:drop .26s cubic-bezier(.25,1.5,.5,1)}
 @keyframes drop{from{transform:translate(-50%,-170%) rotate(var(--r,0deg)) scale(1.2);opacity:.3}}
 
@@ -188,7 +225,7 @@ body[data-screen="home"] .top .brand{visibility:hidden}
 .board.h .store{flex-direction:column;justify-content:center}
 .board.v .store{flex-direction:row}
 .trough{position:relative;border-radius:999px;
-  background:radial-gradient(ellipse at 50% 42%,#1f0e07 0%,#2d160b 50%,#43220f 84%,#58301a 100%);
+  background:var(--trough);
   box-shadow:var(--carve);transition:box-shadow .2s ease}
 .trough .seeds{--sz:calc(var(--hole)*.17)}
 .board.h .trough{width:calc(var(--hole)*.86);flex:1;min-height:0}
@@ -205,8 +242,15 @@ body[data-screen="home"] .top .brand{visibility:hidden}
 .store.turn .dot{background:var(--gold);box-shadow:0 0 0 3px var(--gold-glow)}
 .store.turn .trough{box-shadow:var(--carve),0 0 0 2px rgba(234,176,63,.55)}
 
-.hand{position:absolute;left:0;top:0;z-index:5;pointer-events:none;display:flex;align-items:center;gap:6px;padding:4px 9px 4px 6px;border-radius:999px;background:rgba(16,21,42,.93);border:1px solid var(--gold);color:var(--gold);font:500 13px/1 var(--f-mono);box-shadow:0 6px 16px rgba(0,0,0,.45);transition-property:transform;transition-timing-function:ease;will-change:transform}
-.hand .seed,.reveal .seed{position:relative;left:auto;top:auto;transform:none;--sz:13px;flex:none}
+/* a mão que carrega as sementes durante a semeadura */
+.hand{position:absolute;left:0;top:0;z-index:7;pointer-events:none;width:var(--hand,54px);height:var(--hand,54px);transition-property:transform;transition-timing-function:ease;will-change:transform}
+.hand svg{width:100%;height:100%;transform:rotate(180deg);filter:drop-shadow(0 8px 7px rgba(0,0,0,.55))}
+.hand b{position:absolute;top:-6px;right:-10px;min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:var(--gold);color:var(--gold-ink);font:500 12px/22px var(--f-mono);text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.45)}
+.reveal .seed{position:relative;left:auto;top:auto;transform:none;--sz:13px;flex:none}
+.fx{position:absolute;inset:0;pointer-events:none;z-index:6;overflow:visible}
+.fx .seed{transform:none}
+.plus{position:absolute;font:400 28px/1 var(--f-display);color:var(--gold);text-shadow:0 2px 0 rgba(0,0,0,.55);white-space:nowrap;pointer-events:none}
+.confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:25}
 
 /* ---------- status ---------- */
 .status{display:flex;align-items:flex-start;justify-content:space-between;gap:12px 20px;flex-wrap:wrap;max-width:980px;margin-inline:auto;padding-top:18px}
@@ -253,10 +297,44 @@ body[data-screen="home"] .top .brand{visibility:hidden}
 .sheet .credit{margin-top:20px;padding-top:14px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-3)}
 .rules{width:min(640px,100%)}
 .rules:focus{outline:none}
-.mini{display:grid;grid-template-columns:30px repeat(6,minmax(0,1fr)) 30px;grid-template-rows:repeat(2,32px);gap:5px;padding:8px;margin:16px 0 8px;max-width:380px;border-radius:18px;background-color:var(--wood);background-image:linear-gradient(180deg,rgba(255,222,186,.1),rgba(0,0,0,.24))}
-.mini span{display:grid;place-items:center;border-radius:50%;background:rgba(0,0,0,.38);font:500 12px/1 var(--f-mono);color:var(--engrave)}
-.mini .ms{grid-row:1/span 2;border-radius:15px;font:700 11px/1 var(--f-body);letter-spacing:.06em}
-.mini-cap{font-size:13px}
+.rules:focus{outline:none}
+/* aula animada */
+.lesson-top{display:flex;align-items:center;gap:12px}
+.lesson-top h2{margin:0}
+.step-count{margin-left:auto;font:500 12px/1 var(--f-mono);color:var(--ink-3)}
+.mini-board{display:grid;grid-template-columns:1.15fr repeat(6,minmax(0,1fr)) 1.15fr;column-gap:clamp(3px,1.2vw,7px);row-gap:3px;padding:6px clamp(8px,2vw,12px);margin:16px 0 0;border-radius:26px;
+  background-color:var(--wood);background-image:linear-gradient(180deg,rgba(255,222,186,.12),rgba(0,0,0,.16) 55%,rgba(0,0,0,.28)),var(--grain,none);background-size:cover;
+  box-shadow:inset 0 2px 0 rgba(255,230,200,.2),inset 0 -4px 0 rgba(0,0,0,.25),0 0 0 2px #3f2211,0 14px 30px rgba(5,8,20,.5)}
+.mini-board .mn{text-align:center;font:500 10px/1.2 var(--f-mono);color:var(--engrave-2)}
+.mini-board .mh,.mini-board .ms{position:relative;box-shadow:inset 0 3px 6px rgba(0,0,0,.72),0 1px 0 rgba(255,226,190,.16);transition:box-shadow .2s ease,opacity .25s ease}
+.mini-board .mh{aspect-ratio:1;border-radius:50%;background:var(--pit)}
+.mini-board .ms{grid-row:2/span 2;border-radius:999px;background:var(--trough);display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:7px 0}
+.mini-board .ml{position:relative;z-index:1;font:700 10px/1 var(--f-body);letter-spacing:.06em;color:var(--engrave-2)}
+.mini-board .mc{position:absolute;right:-3px;bottom:-5px;z-index:1;font:500 11px/1 var(--f-mono);font-style:normal;color:var(--engrave);text-shadow:0 1px 0 #000,0 0 3px #000}
+.mini-board .ms .mc{position:relative;right:auto;bottom:auto;font:400 15px/1 var(--f-display);color:#fff1de}
+.mini-board .mc.pop{animation:pop .42s ease}
+.mini-board .mh.pick,.mini-board .mh.row,.mini-board .ms.row{box-shadow:inset 0 3px 6px rgba(0,0,0,.72),0 0 0 2px var(--gold),0 0 12px var(--gold-glow)}
+.mini-board .mh.harvest{box-shadow:inset 0 3px 6px rgba(0,0,0,.72),0 0 0 2px var(--gold),0 0 18px rgba(234,176,63,.75)}
+.mini-board .mh.harvest .seed{filter:brightness(1.35) sepia(.45)}
+.mini-board .mh.ok{box-shadow:inset 0 3px 6px rgba(0,0,0,.72),0 0 0 2px var(--ok),0 0 12px rgba(108,197,154,.35)}
+.mini-board .mh.no{opacity:.35}
+.mini-board .mh.deny::after,.mini-board .mh.skip::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:2px dashed var(--threat);pointer-events:none}
+.mini-board .mh.skip::after{border-color:var(--engrave)}
+.mini-board .ms.win{box-shadow:inset 0 3px 6px rgba(0,0,0,.72),0 0 0 3px var(--gold),0 0 22px rgba(234,176,63,.6)}
+.lesson-copy{min-height:9.5em}
+.lesson-copy h3{margin:16px 0 6px;font:400 23px/1.15 var(--f-display);letter-spacing:0;text-transform:none;color:var(--ink)}
+.lesson-nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.lesson-nav .primary{margin-left:auto}
+.dots{display:flex;gap:6px;justify-content:center;margin-top:14px}
+.dots i{width:7px;height:7px;border-radius:4px;background:var(--cloth-3);transition:width .25s ease,background .25s ease}
+.dots i.on{width:22px;background:var(--gold)}
+.dots i.done{background:rgba(234,176,63,.45)}
+.all-rules{margin-top:18px;padding-top:10px;border-top:1px solid var(--line)}
+.all-rules summary{cursor:pointer;min-height:36px;display:flex;align-items:center;font-weight:700;color:var(--ink-2)}
+.all-rules summary:hover{color:var(--ink)}
+.all-rules>p:first-of-type{margin-top:8px}
+.end h2{animation:pop-in .55s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes pop-in{from{transform:scale(.6);opacity:0}}
 
 .hands{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}
 .handbtn{display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--cloth-3);cursor:pointer;font-weight:700;transition:border-color .15s,transform .15s}
@@ -314,6 +392,13 @@ body[data-screen="home"] .top .brand{visibility:hidden}
       <p class="lede">O jogo africano de semear e colher. Duas pessoas, 48 sementes e uma regra de ouro: ninguém pode deixar o outro passar fome.</p>
     </div>
     <div class="deco" id="deco" aria-hidden="true"></div>
+    <div class="adinkra" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><title>Adinkrahene</title><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6.3"/><circle cx="12" cy="12" r="2.6"/></svg>
+      <svg viewBox="0 0 24 24"><title>Nsoromma</title><path d="M12 2 13.72 7.84 19.07 4.93 16.16 10.28 22 12 16.16 13.72 19.07 19.07 13.72 16.16 12 22 10.28 16.16 4.93 19.07 7.84 13.72 2 12 7.84 10.28 4.93 4.93 10.28 7.84Z"/><circle cx="12" cy="12" r="1.8"/></svg>
+      <svg viewBox="0 0 24 24"><title>Akoma</title><path d="M12 20.5C6 16 3 12.6 3 9a4.5 4.5 0 0 1 9-1 4.5 4.5 0 0 1 9 1c0 3.6-3 7-9 11.5Z"/></svg>
+      <svg viewBox="0 0 24 24"><title>Nkyinkyim</title><path d="M8 2l8 4-8 4 8 4-8 4 8 4"/></svg>
+    </div>
+    <p class="adinkra-cap">Símbolos adinkra, dos povos akan, da mesma região do Awelé.</p>
     <div class="menu">
       <button class="choice primary" id="goCreate" type="button"><span class="ic" aria-hidden="true">+</span><span class="ct">Criar partida</span><span class="cd">Gera um número e um QR Code para o seu colega entrar.</span></button>
       <button class="choice" id="goJoin" type="button"><span class="ic" aria-hidden="true">#</span><span class="ct">Entrar em partida</span><span class="cd">Digite o número que aparece na tela do seu colega.</span></button>
@@ -362,7 +447,19 @@ body[data-screen="home"] .top .brand{visibility:hidden}
     <section class="table" aria-label="Tabuleiro">
       <div class="board-wrap" id="boardWrap">
         <div class="board h" id="board"></div>
-        <div class="hand" id="hand" hidden><i class="seed" style="--c:#a9afa5"></i><span id="handN">4</span></div>
+        <div class="fx" id="fx"></div>
+        <div class="hand" id="hand" hidden>
+          <svg class="fist" viewBox="0 0 120 120" aria-hidden="true"><g>
+            <path class="b" d="M46 96v18h32V96"/>
+            <rect class="b" x="20" y="40" width="80" height="62" rx="26"/>
+            <rect class="f" x="24" y="26" width="22" height="32" rx="11"/>
+            <rect class="f" x="44" y="21" width="22" height="35" rx="11"/>
+            <rect class="f" x="64" y="24" width="20" height="33" rx="10"/>
+            <rect class="f" x="82" y="31" width="16" height="27" rx="8"/>
+            <path class="t" d="M26 72c14-10 36-10 50-4 6 3 4 12-4 12-14-2-30 0-42 4-6 0-8-8-4-12z"/>
+          </g></svg>
+          <b id="handN">4</b>
+        </div>
       </div>
       <div class="status">
         <div class="text" aria-live="polite">
@@ -432,13 +529,25 @@ body[data-screen="home"] .top .brand{visibility:hidden}
 
 <div class="overlay" id="rulesDlg" hidden>
   <div class="sheet rules" role="dialog" aria-modal="true" aria-labelledby="rulesTitle" tabindex="-1">
-    <h2 id="rulesTitle">Como jogar</h2>
-    <p>Mancala é uma família de jogos africanos de semear e colher. Awelé é a versão da Costa do Marfim: dois jogadores, 48 sementes e uma regra de ouro, ninguém pode deixar o outro passar fome.</p>
-    <div class="mini" aria-hidden="true">
-      <span class="ms" style="grid-column:1">N</span><span>12</span><span>11</span><span>10</span><span>9</span><span>8</span><span>7</span><span class="ms" style="grid-column:8">S</span>
-      <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span>
+    <div class="lesson-top">
+      <h2 id="rulesTitle">Como jogar</h2>
+      <span class="step-count" id="stepCount">1 de 8</span>
+      <button class="btn icon-btn" type="button" data-close aria-label="Fechar as regras">✕</button>
     </div>
-    <p class="mini-cap">Sul embaixo (casas 1 a 6), Norte em cima (7 a 12). Cada um guarda o que colhe no depósito à sua direita. No jogo, a sua fileira fica sempre do seu lado da tela.</p>
+    <div class="mini-board" id="lessonBoard" aria-hidden="true"></div>
+    <div class="lesson-copy" aria-live="polite">
+      <h3 id="lessonTitle"></h3>
+      <p id="lessonText"></p>
+    </div>
+    <div class="lesson-nav">
+      <button class="btn" id="lessonPrev" type="button">Anterior</button>
+      <button class="btn" id="lessonReplay" type="button">Ver de novo</button>
+      <button class="btn primary" id="lessonNext" type="button">Próximo</button>
+    </div>
+    <div class="dots" id="lessonDots" aria-hidden="true"></div>
+    <details class="all-rules">
+    <summary>Ler todas as regras em texto</summary>
+    <p>Mancala é uma família de jogos africanos de semear e colher. Awelé é a versão da Costa do Marfim: dois jogadores, 48 sementes e uma regra de ouro, ninguém pode deixar o outro passar fome. Sul fica embaixo (casas 1 a 6), Norte em cima (7 a 12), e cada um guarda o que colhe no depósito à sua direita. No jogo, a sua fileira fica sempre do seu lado da tela.</p>
     <h3>Preparação</h3>
     <p>Cada uma das 12 casas começa com 4 sementes.</p>
     <h3>Semear</h3>
@@ -455,10 +564,12 @@ body[data-screen="home"] .top .brand{visibility:hidden}
     <p>Um jogador esconde uma semente numa das mãos. Quem acertar a mão começa e joga de Sul.</p>
     <h3>Dicas na tela</h3>
     <p>Com as dicas ligadas, um contorno tracejado laranja marca as suas casas que o adversário pode colher na próxima jogada. Com mouse, passe o cursor sobre uma casa para ver onde a última semente cai e quanto ela colhe.</p>
+    </details>
     <p class="credit">Regras conforme o livro Mancala Awelé, da Coleção Jogos de Tabuleiro (Secretaria Municipal de Educação de São Paulo, 2020).</p>
-    <div class="actions"><button class="btn primary" type="button" data-close>Entendi</button></div>
   </div>
 </div>
+
+<canvas class="confetti" id="confetti" hidden></canvas>
 
 <div class="overlay" id="endDlg" hidden>
   <div class="sheet end" role="dialog" aria-modal="true" aria-labelledby="endTitle" style="width:min(440px,100%)">
@@ -493,6 +604,7 @@ const eventEl = $('#event'), promptEl = $('#prompt'), legendEl = $('#legend');
 const logBody = $('#logBody'), logScroll = $('#logScroll'), logEmpty = $('#logEmpty');
 const undoBtn = $('#undo'), hintsBox = $('#hints'), soundBtn = $('#sound'), leaveBtn = $('#leave');
 const rulesDlg = $('#rulesDlg'), endDlg = $('#endDlg'), ritualEl = $('#ritual');
+const fxEl = $('#fx'), confettiEl = $('#confetti'), handSvg = handEl.querySelector('svg');
 const motionOK = !matchMedia('(prefers-reduced-motion: reduce)').matches;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -670,6 +782,10 @@ for (let p = 0; p < 2; p++) {
   el.nameEl = el.querySelector('.nm'); el.roleEl = el.querySelector('.role');
   boardEl.appendChild(el); storeEls.push(el);
 }
+const grooveEl = document.createElement('div');
+grooveEl.className = 'groove';
+grooveEl.setAttribute('aria-hidden', 'true');
+boardEl.prepend(grooveEl);
 
 // textura de madeira gerada uma vez (veios ondulados)
 const grainCache = {};
@@ -707,20 +823,21 @@ function layout(force) {
   if (!force && W === lastW && H === lastH) return;
   lastW = W; lastH = H;
   const vertical = W < 640;
-  const pad = vertical ? 12 : 16, gap = 6;
+  const pad = vertical ? 12 : 16, gap = 6, mid = vertical ? 14 : 16;
   let hole, cw, ch, sw = 0, sh = 0;
   if (!vertical) {
     const C = Math.min(118, (W - 2 * pad - 7 * gap) / 8.6);
-    hole = Math.max(40, Math.min(C - 10, 100, (H - 150 - 2 * pad - gap) / 2 - 36));
+    hole = Math.max(40, Math.min(C - 10, 100, (H - 150 - 2 * pad - mid) / 2 - 36));
     cw = Math.floor(hole + 10); ch = Math.floor(hole + 36); sw = Math.round(cw * 1.3);
   } else {
-    const col = Math.floor((W - 2 * pad - gap) / 2);
+    const col = Math.floor((W - 2 * pad - mid) / 2);
     hole = Math.max(46, Math.min(col - 50, 74, (H - 316) / 7.9));
     cw = col; ch = Math.floor(hole + 10); sh = Math.round(hole * .95 + 10);
   }
   hole = Math.floor(hole);
   const st = boardEl.style;
-  st.setProperty('--hole', hole + 'px'); st.setProperty('--pad', pad + 'px'); st.setProperty('--gap', gap + 'px');
+  st.setProperty('--hole', hole + 'px'); st.setProperty('--pad', pad + 'px'); st.setProperty('--gap', gap + 'px'); st.setProperty('--mid', mid + 'px');
+  wrapEl.style.setProperty('--hand', Math.round(Math.max(46, Math.min(78, hole * .98))) + 'px');
   st.setProperty('--cw', cw + 'px'); st.setProperty('--ch', ch + 'px'); st.setProperty('--sw', sw + 'px'); st.setProperty('--sh', sh + 'px');
   boardEl.classList.toggle('h', !vertical); boardEl.classList.toggle('v', vertical);
   if (orient !== vertical) { orient = vertical; st.setProperty('--grain', `url(${grain(vertical)})`); }
@@ -744,7 +861,7 @@ function place(vertical) {
 }
 
 /* ===== DESENHO ===== */
-const COLORS = ['#a9afa5', '#979f98', '#b8b6a7', '#8b9590', '#a7a292', '#9ca8a2', '#b1b3a9'];
+const COLORS = ['#a9afa5', '#979f98', '#b8b6a7', '#8b9590', '#a7a292', '#9ca8a2', '#b1b3a9', '#9c9a84', '#8f9a86'];
 const SEED_TAG = '<i class="seed" style="--c:#a9afa5"></i>';
 const frac = v => v - Math.floor(v);
 const hash = (a, b) => frac(Math.sin(a * 12.9898 + b * 78.233) * 43758.5453);
@@ -759,7 +876,8 @@ function seedsHTML(n, slot, store) {
     const x = r * Math.cos(ang) + (hash(slot, k) - 0.5) * 0.02;
     const y = r * Math.sin(ang) + (hash(k, slot + 7) - 0.5) * 0.02;
     const col = COLORS[(hash(slot + 3, k * 2) * COLORS.length) | 0];
-    out += `<i class="seed" style="left:${(50 + x * 100).toFixed(1)}%;top:${(50 + y * 100).toFixed(1)}%;--r:${(hash(k, slot) * 180) | 0}deg;--c:${col}"></i>`;
+    const size = (0.88 + hash(slot * 3 + 1, k) * 0.24).toFixed(2), shape = (0.78 + hash(k * 5 + 2, slot) * 0.14).toFixed(2);
+    out += `<i class="seed" style="left:${(50 + x * 100).toFixed(1)}%;top:${(50 + y * 100).toFixed(1)}%;--r:${(hash(k, slot) * 180) | 0}deg;--c:${col};--k:${size};--a:${shape}"></i>`;
   }
   return out;
 }
@@ -778,17 +896,89 @@ function drawStore(p, n, pop) {
   if (pop && motionOK) { el.scoreEl.classList.remove('pop'); void el.scoreEl.offsetWidth; el.scoreEl.classList.add('pop'); }
 }
 
+/* ===== TABULEIRO DA TELA INICIAL: distribui as sementes e joga sozinho, devagar ===== */
+const decoEl = $('#deco'), decoHoles = [], decoStores = [];
 function buildDeco() {
-  const counts = [3, 0, 5, 6, 1, 2, 4, 4, 0, 7, 2, 3], stores = [6, 5];
-  let html = `<div class="ds" style="grid-column:1"><span class="seeds">${seedsHTML(stores[1], 31, true)}</span></div>`;
+  const mk = (cls, style) => {
+    const d = document.createElement('div');
+    d.className = cls; d.style.cssText = style; d.innerHTML = '<span class="seeds"></span>';
+    decoEl.appendChild(d);
+    return d;
+  };
+  decoStores[1] = mk('ds', 'grid-column:1');
   for (let i = 0; i < 12; i++) {
     const near = i < 6, k = i % 6;
-    html += `<div class="dh" style="grid-column:${near ? 2 + k : 7 - k};grid-row:${near ? 2 : 1}"><span class="seeds">${seedsHTML(counts[i], i + 40, false)}</span></div>`;
+    decoHoles[i] = mk('dh', `grid-column:${near ? 2 + k : 7 - k};grid-row:${near ? 2 : 1}`);
   }
-  html += `<div class="ds" style="grid-column:8"><span class="seeds">${seedsHTML(stores[0], 30, true)}</span></div>`;
-  const el = $('#deco');
-  el.innerHTML = html;
-  el.style.setProperty('--grain', `url(${grain(false)})`);
+  decoStores[0] = mk('ds', 'grid-column:8');
+  decoEl.style.setProperty('--grain', `url(${grain(false)})`);
+}
+function decoHole(i, n, drop) {
+  const s = decoHoles[i].firstChild;
+  s.style.setProperty('--f', n > 16 ? Math.max(.68, Math.sqrt(16 / n)).toFixed(3) : 1);
+  s.innerHTML = seedsHTML(n, i + 40, false);
+  if (drop && n && motionOK) s.lastElementChild.classList.add('drop');
+}
+function decoStore(p, n) { decoStores[p].firstChild.innerHTML = seedsHTML(n, 30 + p, true); }
+function decoDraw(pos) {
+  for (let i = 0; i < 12; i++) decoHole(i, pos.b[i]);
+  decoStore(0, pos.s[0]); decoStore(1, pos.s[1]);
+}
+let decoGen = 0;
+async function decoRun() {
+  const gen = ++decoGen;
+  if (!motionOK) { decoDraw({ b: [3, 0, 5, 6, 1, 2, 4, 4, 0, 7, 2, 3], s: [6, 5] }); return; }
+  let pos = { b: Array(12).fill(0), s: [0, 0], turn: 0 };
+  decoDraw(pos);
+  await sleep(350);
+  for (let r = 0; r < 4; r++) {
+    for (let i = 0; i < 12; i++) {
+      if (gen !== decoGen) return;
+      pos.b[i]++; decoHole(i, pos.b[i], true);
+      await sleep(34);
+    }
+  }
+  let moves = 0;
+  while (gen === decoGen) {
+    await sleep(1300);
+    if (gen !== decoGen) return;
+    if (G.screen !== 'home' || document.hidden) continue;
+    const L = legal(pos);
+    if (!L.moves.length || pos.s[0] >= 25 || pos.s[1] >= 25 || moves >= 50) {
+      decoEl.classList.add('fade');
+      await sleep(700);
+      decoEl.classList.remove('fade');
+      decoRun();
+      return;
+    }
+    // como gente jogando: na maioria das vezes, prefere a jogada que colhe mais
+    const opts = L.moves.map(m => ({ m, t: play(pos, m).taken }));
+    const best = Math.max(...opts.map(o => o.t));
+    const pool = best > 0 && Math.random() < .7 ? opts.filter(o => o.t === best) : opts;
+    pos = await decoMove(pos, pool[(Math.random() * pool.length) | 0].m, gen);
+    if (!pos) return;
+    moves++;
+  }
+}
+async function decoMove(pos, m, gen) {
+  const res = play(pos, m), disp = pos.b.slice();
+  decoHoles[m].classList.add('pick');
+  await sleep(420);
+  decoHoles[m].classList.remove('pick');
+  disp[m] = 0; decoHole(m, 0);
+  for (const j of res.path) {
+    await sleep(220);
+    if (gen !== decoGen) return null;
+    disp[j]++; decoHole(j, disp[j], true);
+  }
+  if (res.caps.length) {
+    res.caps.forEach(c => decoHoles[c].classList.add('harvest'));
+    await sleep(650);
+    if (gen !== decoGen) return null;
+    res.caps.forEach(c => { decoHoles[c].classList.remove('harvest'); decoHole(c, 0); });
+    decoStore(pos.turn, res.pos.s[pos.turn]);
+  }
+  return res.pos;
 }
 
 function threatened(pos) {
@@ -820,6 +1010,7 @@ function render() {
     el.classList.toggle('legal', legalSet.has(i));
     el.classList.toggle('locked', !!active && owner(i) === pos.turn && !legalSet.has(i));
     el.classList.toggle('threat', threats.has(i));
+    el.classList.toggle('lastmove', !G.busy && G.moves.length > 0 && G.moves[G.moves.length - 1] === i);
     el.classList.remove('land', 'wouldcap', 'harvest', 'picked');
     el.disabled = !legalSet.has(i);
   }
@@ -913,13 +1104,63 @@ function renderSound() {
 }
 
 /* ===== ANIMAÇÃO DA SEMEADURA ===== */
+// a mão fica por cima da casa, com os nós dos dedos sobre a borda de cima
 function putHand(i, dur) {
   const r = pitEls[i].holeEl.getBoundingClientRect(), w = wrapEl.getBoundingClientRect();
-  const x = r.left - w.left + r.width / 2, y = r.top - w.top + r.height / 2;
+  const hs = handEl.offsetWidth || 54;
+  const x = r.left - w.left + r.width / 2, top = r.top - w.top;
   handEl.style.transitionDuration = (motionOK ? dur : 0) + 'ms';
-  handEl.style.transform = `translate(${Math.round(x - handEl.offsetWidth / 2)}px,${Math.round(y - r.height / 2 - handEl.offsetHeight / 2 + 2)}px)`;
+  handEl.style.transform = `translate(${Math.round(x - hs / 2)}px,${Math.round(top + r.height * .34 - hs)}px)`;
+}
+function dipHand() {
+  if (!motionOK || !handSvg.animate) return;
+  handSvg.animate([
+    { transform: 'rotate(180deg) translateY(0)' },
+    { transform: 'rotate(180deg) translateY(-7px)' },
+    { transform: 'rotate(180deg) translateY(0)' }
+  ], { duration: 160, easing: 'ease-out' });
 }
 function hideHand() { handEl.hidden = true; }
+
+// sementes colhidas voam em arco até o lugar exato onde vão ficar no depósito
+function flySeeds(fromEl, trough, start) {
+  const seeds = Array.from(fromEl.children);
+  if (!motionOK || !seeds.length || !Element.prototype.animate) return Promise.resolve();
+  const w = wrapEl.getBoundingClientRect(), t = trough.getBoundingClientRect();
+  return Promise.all(seeds.map((s, j) => {
+    const r = s.getBoundingClientRect(), k = start + j;
+    const rr = 0.37 * Math.sqrt((k + 0.5) / 48), ang = k * 2.39996 + 1.1;
+    const tx = t.left - w.left + t.width * (0.5 + rr * Math.cos(ang));
+    const ty = t.top - w.top + t.height * (0.5 + rr * Math.sin(ang));
+    const sx = r.left - w.left + r.width / 2, sy = r.top - w.top + r.height / 2;
+    const c = document.createElement('i');
+    c.className = 'seed';
+    c.style.cssText = `left:${sx - r.width / 2}px;top:${sy - r.height / 2}px;width:${r.width}px;height:${r.height}px;--c:${s.style.getPropertyValue('--c')}`;
+    fxEl.appendChild(c);
+    const dx = tx - sx, dy = ty - sy, lift = -34 - Math.min(70, Math.abs(dx) * .18);
+    return c.animate([
+      { transform: 'translate(0,0) scale(1)' },
+      { transform: `translate(${dx * .5}px,${dy * .5 + lift}px) scale(1.2)`, offset: .45 },
+      { transform: `translate(${dx}px,${dy}px) scale(.9)` }
+    ], { duration: 560 + j * 40, easing: 'cubic-bezier(.45,.05,.35,1)', fill: 'forwards' })
+      .finished.then(() => c.remove(), () => c.remove());
+  }));
+}
+function floatPlus(trough, n) {
+  if (!motionOK || !Element.prototype.animate) return;
+  const w = wrapEl.getBoundingClientRect(), t = trough.getBoundingClientRect();
+  const el = document.createElement('div');
+  el.className = 'plus';
+  el.textContent = '+' + n;
+  el.style.left = (t.left - w.left + t.width / 2) + 'px';
+  el.style.top = (t.top - w.top + t.height / 2) + 'px';
+  fxEl.appendChild(el);
+  el.animate([
+    { opacity: 0, transform: 'translate(-50%,-30%) scale(.7)' },
+    { opacity: 1, transform: 'translate(-50%,-90%) scale(1.15)', offset: .25 },
+    { opacity: 0, transform: 'translate(-50%,-210%) scale(1)' }
+  ], { duration: 1200, easing: 'ease-out', fill: 'forwards' }).finished.then(() => el.remove(), () => el.remove());
+}
 
 async function animateSow(before, res, from, gid) {
   const disp = before.b.slice(), n = disp[from];
@@ -935,21 +1176,32 @@ async function animateSow(before, res, from, gid) {
     await sleep(step * .8);
     if (gid !== G.gid) return false;
     disp[j]++; inHand--; handN.textContent = inHand;
-    drawPit(j, disp[j], true); knock();
+    drawPit(j, disp[j], true); dipHand(); knock();
     await sleep(step * .35);
   }
   hideHand();
   if (res.caps.length) {
     res.caps.forEach(c => pitEls[c].classList.add('harvest'));
     chime();
-    await sleep(motionOK ? 560 : 60);
-    for (const c of res.caps.slice().reverse()) {
-      if (gid !== G.gid) return false;
-      store[p] += disp[c]; disp[c] = 0;
-      drawPit(c, 0); pitEls[c].classList.remove('harvest');
-      drawStore(p, store[p], true);
-      await sleep(motionOK ? 150 : 10);
-    }
+    await sleep(motionOK ? 520 : 60);
+    if (gid !== G.gid) return false;
+    const trough = storeEls[p].querySelector('.trough');
+    let slot = store[p];
+    const flights = res.caps.slice().reverse().map((c, idx) => (async () => {
+      await sleep(motionOK ? idx * 160 : 0);
+      if (gid !== G.gid) return;
+      const n = disp[c];
+      const fly = flySeeds(pitEls[c].seedsEl, trough, slot);
+      slot += n;
+      disp[c] = 0; drawPit(c, 0); pitEls[c].classList.remove('harvest');
+      await fly;
+      if (gid !== G.gid) return;
+      store[p] += n; drawStore(p, store[p], true); knock();
+    })());
+    await Promise.all(flights);
+    if (gid !== G.gid) return false;
+    floatPlus(trough, res.taken);
+    await sleep(motionOK ? 250 : 0);
   }
   return gid === G.gid;
 }
@@ -1017,8 +1269,9 @@ function showEnd() {
   const title = w < 0 ? 'Empate' : w === G.human ? 'Você venceu!' : online() ? 'Seu colega venceu' : 'O computador venceu';
   const label = p => (p === G.human ? 'Você' : online() ? 'Colega' : 'Computador');
   $('#endTitle').textContent = title;
-  $('#endA').textContent = s[near]; $('#endAName').textContent = label(near);
-  $('#endB').textContent = s[far]; $('#endBName').textContent = label(far);
+  countUp($('#endA'), s[near]); $('#endAName').textContent = label(near);
+  countUp($('#endB'), s[far]); $('#endBName').textContent = label(far);
+  if (w === G.human) { celebrate(); chime(); }
   let why;
   if (o.reason === '25') { const v = s[0] >= 25 ? 0 : 1; why = `${nameOf(v)} colheu ${s[v]} sementes, mais da metade das 48.`; }
   else if (o.reason === 'fome') why = `${nameOf(o.mover)} não tinha como dar de comer ao adversário. Cada um colheu as sementes da própria fileira.`;
@@ -1027,6 +1280,55 @@ function showEnd() {
   $('#endWhy').textContent = why;
   endDlg.hidden = false;
   $('#again').focus();
+}
+
+function countUp(el, to) {
+  if (!motionOK) { el.textContent = to; return; }
+  const t0 = performance.now(), dur = 900;
+  const step = now => {
+    const k = Math.min(1, (now - t0) / dur);
+    el.textContent = Math.round(to * (1 - Math.pow(1 - k, 3)));
+    if (k < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+// chuva de sementes (e alguns fios dourados) quando você vence
+function celebrate() {
+  if (!motionOK) return;
+  const cv = confettiEl, ctx = cv.getContext('2d'), dpr = Math.min(2, window.devicePixelRatio || 1);
+  const W = window.innerWidth, H = window.innerHeight;
+  cv.width = W * dpr; cv.height = H * dpr; cv.hidden = false;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const cols = COLORS.concat(['#eab03f', '#eab03f', '#d9d3c1']);
+  const parts = Array.from({ length: 120 }, () => ({
+    x: Math.random() * W, y: -20 - Math.random() * H * .7,
+    vx: (Math.random() - .5) * 1.8, vy: 1.5 + Math.random() * 3,
+    r: 4 + Math.random() * 4.5, a: .74 + Math.random() * .2,
+    rot: Math.random() * 6.28, vr: (Math.random() - .5) * .2,
+    c: cols[(Math.random() * cols.length) | 0]
+  }));
+  const t0 = performance.now();
+  let last = t0;
+  const frame = now => {
+    // física em tempo real (dt em "quadros de 60 Hz"), para cair igual em telas de 60, 120 ou 165 Hz
+    const dt = Math.min(3, Math.max(0, (now - last) / 16.67));
+    last = now;
+    ctx.clearRect(0, 0, W, H);
+    let left = 0;
+    for (const p of parts) {
+      p.vy += .07 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.vr * dt;
+      if (p.y < H + 20) left++;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+      const g = ctx.createRadialGradient(-p.r * .35, -p.r * .35, p.r * .1, 0, 0, p.r * 1.15);
+      g.addColorStop(0, 'rgba(255,255,255,.8)'); g.addColorStop(.35, p.c); g.addColorStop(1, 'rgba(20,12,6,.6)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.ellipse(0, 0, p.r, p.r * p.a, 0, 0, 6.2832); ctx.fill();
+      ctx.restore();
+    }
+    if (left && now - t0 < 6000) requestAnimationFrame(frame);
+    else { ctx.clearRect(0, 0, W, H); cv.hidden = true; }
+  };
+  requestAnimationFrame(frame);
 }
 
 function eventText(p, i, r) {
@@ -1583,14 +1885,157 @@ $('#goJoin').addEventListener('click', () => {
   show('join');
   $('#codeIn').focus();
 });
+/* ===== AULA ANIMADA DAS REGRAS ===== */
+const LESSON = { step: 0, gen: 0, M: null };
+const casas = obj => { const b = Array(12).fill(0); for (const k in obj) b[k - 1] = obj[k]; return b; };
+const ALL4 = Array(12).fill(4);
+const STEPS = [
+  { t: 'O tabuleiro', b: ALL4, s: [0, 0], run: lessonRows,
+    p: 'São duas fileiras de 6 casas. A de baixo é do Sul (casas 1 a 6) e a de cima é do Norte (7 a 12). Cada casa começa com 4 sementes, 48 no total, e cada jogador guarda o que colhe no depósito à sua direita.' },
+  { t: 'Semear', b: ALL4, s: [0, 0], run: (M, gen) => lessonSow(M, 1, gen),
+    p: 'Na sua vez, pegue todas as sementes de uma casa sua e solte uma em cada casa seguinte, no sentido anti-horário. Aqui o Sul semeou a casa 2: as 4 sementes foram para as casas 3, 4, 5 e 6.' },
+  { t: 'Colher', b: casas({ 1: 4, 2: 4, 3: 4, 4: 4, 5: 3, 6: 4, 7: 4, 8: 1, 9: 4, 10: 4, 11: 4, 12: 4 }), s: [2, 2], run: (M, gen) => lessonSow(M, 4, gen),
+    p: 'Se a última semente cair numa casa do adversário e ela ficar com 2 ou 3 sementes, você colhe essa casa. A casa 5 levou a última semente até a casa 8, que ficou com 2: o Sul colheu as duas.' },
+  { t: 'Colheita em sequência', b: casas({ 1: 3, 2: 4, 3: 2, 4: 4, 5: 4, 6: 3, 7: 1, 8: 2, 9: 1, 10: 5, 11: 4, 12: 3 }), s: [6, 6], run: (M, gen) => lessonSow(M, 5, gen),
+    p: 'Depois de colher, olhe a casa anterior. Se ela também ficou com 2 ou 3, colha também, e siga voltando até achar uma casa que não tenha. Aqui o Sul colheu as casas 9, 8 e 7 de uma vez: 7 sementes.' },
+  { t: 'Reserva Krou', b: casas({ 1: 1, 3: 2, 5: 1, 6: 14, 7: 1, 8: 1, 9: 1, 10: 2, 11: 2, 12: 4 }), s: [10, 9], run: (M, gen) => lessonSow(M, 5, gen, { fast: true, skip: true }),
+    p: 'Uma casa com 12 sementes ou mais dá a volta inteira no tabuleiro e pula a casa de onde saiu. Com 14 sementes, a casa 6 deu a volta, terminou na casa 9 e colheu 9 sementes.' },
+  { t: 'Dar de comer', b: casas({ 2: 1, 3: 5, 4: 1, 5: 2, 6: 1 }), s: [20, 18], run: lessonFeed,
+    p: 'Ninguém pode deixar o outro passar fome. O Norte ficou sem sementes, então o Sul é obrigado a jogar uma casa que chegue até ele. Só valem as casas 3, 5 e 6, marcadas em verde.' },
+  { t: 'Colheita anulada', b: casas({ 1: 2, 2: 3, 3: 1, 4: 2, 6: 3, 7: 1, 8: 2, 9: 1 }), s: [17, 16], run: (M, gen) => lessonSow(M, 5, gen),
+    p: 'Uma colheita que levaria todas as sementes do adversário não vale. A semeadura acontece, mas as sementes ficam onde estão. Aqui o Sul ia colher tudo o que o Norte tinha, então a colheita foi anulada.' },
+  { t: 'Fim da partida', b: casas({ 2: 1, 4: 2, 7: 1, 11: 1 }), s: [25, 18], run: lessonEnd,
+    p: 'Vence quem colher 25 sementes, mais da metade. Com 24 a 24 é empate. Se não der mais para dar de comer, ou o final ficar rodando sem colheitas, cada um colhe a própria fileira. E para começar: um esconde uma semente na mão, e quem acertar a mão joga de Sul.' }
+];
+
+function makeMini(el) {
+  el.innerHTML = '';
+  el.style.setProperty('--grain', `url(${grain(false)})`);
+  const mk = (cls, style, html) => {
+    const d = document.createElement('div');
+    d.className = cls; d.style.cssText = style; d.innerHTML = html;
+    el.appendChild(d);
+    return d;
+  };
+  const M = { holes: [], stores: [], b: Array(12).fill(0), s: [0, 0] };
+  M.stores[1] = mk('ms', 'grid-column:1', '<span class="seeds"></span><b class="ml">N</b><i class="mc">0</i>');
+  M.stores[0] = mk('ms', 'grid-column:8', '<span class="seeds"></span><b class="ml">S</b><i class="mc">0</i>');
+  for (let i = 0; i < 12; i++) {
+    const near = i < 6, col = near ? 2 + i % 6 : 7 - i % 6;
+    mk('mn', `grid-column:${col};grid-row:${near ? 4 : 1}`, String(i + 1));
+    M.holes[i] = mk('mh', `grid-column:${col};grid-row:${near ? 3 : 2}`, '<span class="seeds"></span><i class="mc"></i>');
+  }
+  return M;
+}
+function miniHole(M, i, n, drop) {
+  const s = M.holes[i].firstChild;
+  s.style.setProperty('--f', n > 16 ? Math.max(.68, Math.sqrt(16 / n)).toFixed(3) : 1);
+  s.innerHTML = seedsHTML(n, i + 60, false);
+  if (drop && n && motionOK) s.lastElementChild.classList.add('drop');
+  M.holes[i].querySelector('.mc').textContent = n;
+}
+function miniStore(M, p, n, pop) {
+  M.stores[p].firstChild.innerHTML = seedsHTML(n, 70 + p, true);
+  const c = M.stores[p].querySelector('.mc');
+  c.textContent = n;
+  if (pop && motionOK) { c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop'); }
+}
+function miniSet(M, b, s) {
+  M.b = b.slice(); M.s = s.slice();
+  M.holes.forEach((h, i) => { h.className = 'mh'; miniHole(M, i, M.b[i]); });
+  M.stores.forEach((st, p) => { st.className = 'ms'; miniStore(M, p, M.s[p]); });
+}
+const alive = gen => gen === LESSON.gen && !rulesDlg.hidden;
+
+async function lessonSow(M, from, gen, opt = {}) {
+  await sleep(600); if (!alive(gen)) return;
+  const pos = { b: M.b.slice(), s: M.s.slice(), turn: owner(from) }, o = 1 - pos.turn;
+  const res = play(pos, from);
+  M.holes[from].classList.add('pick');
+  await sleep(550); if (!alive(gen)) return;
+  M.holes[from].classList.remove('pick');
+  if (opt.skip) M.holes[from].classList.add('skip');
+  const disp = pos.b.slice();
+  disp[from] = 0; miniHole(M, from, 0);
+  for (const j of res.path) {
+    await sleep(opt.fast ? 160 : 300); if (!alive(gen)) return;
+    disp[j]++; miniHole(M, j, disp[j], true); knock();
+  }
+  M.b = disp;
+  if (res.slam) {
+    await sleep(400); if (!alive(gen)) return;
+    const last = res.path[res.path.length - 1];
+    for (let j = last; j >= o * 6 && (disp[j] === 2 || disp[j] === 3); j--) M.holes[j].classList.add('deny');
+    return;
+  }
+  if (res.caps.length) {
+    await sleep(350); if (!alive(gen)) return;
+    res.caps.forEach(c => M.holes[c].classList.add('harvest'));
+    chime();
+    await sleep(750); if (!alive(gen)) return;
+    for (const c of res.caps.slice().reverse()) {
+      M.s[pos.turn] += disp[c]; disp[c] = 0;
+      M.holes[c].classList.remove('harvest'); miniHole(M, c, 0);
+      miniStore(M, pos.turn, M.s[pos.turn], true);
+      await sleep(200); if (!alive(gen)) return;
+    }
+  }
+}
+async function lessonRows(M, gen) {
+  const groups = [[0, 1, 2, 3, 4, 5], [6, 7, 8, 9, 10, 11]];
+  for (let g = 0; g < 2; g++) {
+    await sleep(700); if (!alive(gen)) return;
+    groups[g].forEach(i => M.holes[i].classList.add('row'));
+    await sleep(1300); if (!alive(gen)) return;
+    groups[g].forEach(i => M.holes[i].classList.remove('row'));
+  }
+  await sleep(300); if (!alive(gen)) return;
+  M.stores.forEach(st => st.classList.add('row'));
+  await sleep(1400); if (!alive(gen)) return;
+  M.stores.forEach(st => st.classList.remove('row'));
+}
+async function lessonFeed(M, gen) {
+  await sleep(500); if (!alive(gen)) return;
+  for (let i = 0; i < 6; i++) M.holes[i].classList.add([2, 4, 5].includes(i) ? 'ok' : 'no');
+  await sleep(2000); if (!alive(gen)) return;
+  for (let i = 0; i < 6; i++) M.holes[i].classList.remove('ok', 'no');
+  await lessonSow(M, 5, gen);
+}
+async function lessonEnd(M, gen) {
+  await sleep(600); if (!alive(gen)) return;
+  M.stores[0].classList.add('win');
+  chime();
+}
+
+const dotsEl = $('#lessonDots');
+dotsEl.innerHTML = STEPS.map(() => '<i></i>').join('');
+function showStep(n) {
+  LESSON.step = Math.max(0, Math.min(STEPS.length - 1, n));
+  const st = STEPS[LESSON.step], gen = ++LESSON.gen;
+  $('#lessonTitle').textContent = st.t;
+  $('#lessonText').textContent = st.p;
+  $('#stepCount').textContent = `${LESSON.step + 1} de ${STEPS.length}`;
+  $('#lessonPrev').disabled = LESSON.step === 0;
+  $('#lessonNext').textContent = LESSON.step === STEPS.length - 1 ? 'Entendi' : 'Próximo';
+  Array.from(dotsEl.children).forEach((d, k) => { d.className = k === LESSON.step ? 'on' : k < LESSON.step ? 'done' : ''; });
+  miniSet(LESSON.M, st.b, st.s);
+  st.run(LESSON.M, gen);
+}
 function openRules() {
   rulesDlg.hidden = false;
+  if (!LESSON.M) LESSON.M = makeMini($('#lessonBoard'));
+  rulesDlg.querySelector('.all-rules').open = false;
+  showStep(0);
   const sheet = rulesDlg.querySelector('.sheet');
   sheet.scrollTop = 0;
   sheet.focus({ preventScroll: true });
 }
+function closeRules() { rulesDlg.hidden = true; LESSON.gen++; }
 $('#goRules').addEventListener('click', openRules);
 $('#openRules').addEventListener('click', openRules);
+$('#lessonPrev').addEventListener('click', () => showStep(LESSON.step - 1));
+$('#lessonReplay').addEventListener('click', () => showStep(LESSON.step));
+$('#lessonNext').addEventListener('click', () => { if (LESSON.step === STEPS.length - 1) closeRules(); else showStep(LESSON.step + 1); });
 $('#goAi').addEventListener('click', () => { if (G.sound) audio(); startAiGame(); });
 $('#resume').addEventListener('click', () => {
   const s = readOnline();
@@ -1639,9 +2084,9 @@ $('#again').addEventListener('click', () => {
   if (NET.role === 'host') startHostRitual();
   else { send({ t: 'rematch' }); G.prompt = 'Pedindo a revanche ao seu colega…'; G.event = ''; promptEl.textContent = G.prompt; eventEl.textContent = ''; }
 });
-document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => { b.closest('.overlay').hidden = true; }));
-[rulesDlg, endDlg].forEach(o => o.addEventListener('click', e => { if (e.target === o) o.hidden = true; }));
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { rulesDlg.hidden = true; endDlg.hidden = true; } });
+document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => { b.closest('.overlay').hidden = true; LESSON.gen++; }));
+[rulesDlg, endDlg].forEach(o => o.addEventListener('click', e => { if (e.target === o) { o.hidden = true; LESSON.gen++; } }));
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeRules(); endDlg.hidden = true; } });
 undoBtn.addEventListener('click', undo);
 hintsBox.addEventListener('change', () => { G.hints = hintsBox.checked; savePrefs(); clearPreview(); render(); });
 soundBtn.addEventListener('click', () => { G.sound = !G.sound; savePrefs(); renderSound(); if (G.sound) { audio(); knock(); } });
@@ -1658,6 +2103,7 @@ document.addEventListener('visibilitychange', () => {
 loadPrefs();
 renderSound();
 buildDeco();
+decoRun();
 if (window.ResizeObserver) new ResizeObserver(() => requestAnimationFrame(() => layout(false))).observe(wrapEl);
 window.addEventListener('resize', () => layout(false));
 const sala = (new URLSearchParams(location.search).get('sala') || '').replace(/\D/g, '').slice(0, 4);
