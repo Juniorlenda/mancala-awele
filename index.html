@@ -252,6 +252,7 @@ body[data-screen="home"] .top .brand{visibility:hidden}
 .sheet h3{margin:20px 0 4px;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
 .sheet .credit{margin-top:20px;padding-top:14px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-3)}
 .rules{width:min(640px,100%)}
+.rules:focus{outline:none}
 .mini{display:grid;grid-template-columns:30px repeat(6,minmax(0,1fr)) 30px;grid-template-rows:repeat(2,32px);gap:5px;padding:8px;margin:16px 0 8px;max-width:380px;border-radius:18px;background-color:var(--wood);background-image:linear-gradient(180deg,rgba(255,222,186,.1),rgba(0,0,0,.24))}
 .mini span{display:grid;place-items:center;border-radius:50%;background:rgba(0,0,0,.38);font:500 12px/1 var(--f-mono);color:var(--engrave)}
 .mini .ms{grid-row:1/span 2;border-radius:15px;font:700 11px/1 var(--f-body);letter-spacing:.06em}
@@ -430,11 +431,11 @@ body[data-screen="home"] .top .brand{visibility:hidden}
 </div>
 
 <div class="overlay" id="rulesDlg" hidden>
-  <div class="sheet rules" role="dialog" aria-modal="true" aria-labelledby="rulesTitle">
+  <div class="sheet rules" role="dialog" aria-modal="true" aria-labelledby="rulesTitle" tabindex="-1">
     <h2 id="rulesTitle">Como jogar</h2>
     <p>Mancala é uma família de jogos africanos de semear e colher. Awelé é a versão da Costa do Marfim: dois jogadores, 48 sementes e uma regra de ouro, ninguém pode deixar o outro passar fome.</p>
     <div class="mini" aria-hidden="true">
-      <span class="ms">N</span><span>12</span><span>11</span><span>10</span><span>9</span><span>8</span><span>7</span><span class="ms">S</span>
+      <span class="ms" style="grid-column:1">N</span><span>12</span><span>11</span><span>10</span><span>9</span><span>8</span><span>7</span><span class="ms" style="grid-column:8">S</span>
       <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span>
     </div>
     <p class="mini-cap">Sul embaixo (casas 1 a 6), Norte em cima (7 a 12). Cada um guarda o que colhe no depósito à sua direita. No jogo, a sua fileira fica sempre do seu lado da tela.</p>
@@ -449,7 +450,7 @@ body[data-screen="home"] .top .brand{visibility:hidden}
     <h3>Dar de comer</h3>
     <p>Se o adversário ficar sem sementes, você é obrigado a jogar uma casa que leve sementes até ele. E uma colheita que levaria todas as sementes dele é anulada: a semeadura vale, a colheita não.</p>
     <h3>Fim da partida</h3>
-    <p>Vence quem colher 25 sementes. Com 24 a 24, é empate. Se não houver como dar de comer ao adversário, ou se a única jogada possível deixaria a partida sem continuidade, o jogo acaba e cada um colhe as sementes da própria fileira. O mesmo vale quando a partida fica rodando sem colheitas.</p>
+    <p>Vence quem colher 25 sementes. Com 24 a 24, é empate. Se não houver como dar de comer ao adversário, ou se a única jogada possível deixaria a partida sem continuidade, o jogo acaba e cada um colhe as sementes da própria fileira. O mesmo vale quando o final fica rodando sem colheitas: com 12 sementes ou menos no tabuleiro, 20 lances seguidos sem colher encerram a partida.</p>
     <h3>Quem começa</h3>
     <p>Um jogador esconde uma semente numa das mãos. Quem acertar a mão começa e joga de Sul.</p>
     <h3>Dicas na tela</h3>
@@ -988,7 +989,9 @@ function startTurn(countRep) {
     const key = pos.b.join(',') + '|' + pos.turn;
     G.reps[key] = (G.reps[key] || 0) + 1;
   }
-  if (Object.values(G.reps).some(v => v >= 3) || G.quiet >= 80) return endGame('ciclo');
+  // final que fica rodando sem colheitas: com poucas sementes, 20 lances bastam (no meio do jogo, 80)
+  const onBoard = rowSum(pos.b, 0) + rowSum(pos.b, 1);
+  if (Object.values(G.reps).some(v => v >= 3) || G.quiet >= (onBoard <= 12 ? 20 : 80)) return endGame('ciclo');
   G.legal = L;
   render();
   if (!isHumanTurn() && G.mode === 'ai') aiTurn();
@@ -1020,7 +1023,7 @@ function showEnd() {
   if (o.reason === '25') { const v = s[0] >= 25 ? 0 : 1; why = `${nameOf(v)} colheu ${s[v]} sementes, mais da metade das 48.`; }
   else if (o.reason === 'fome') why = `${nameOf(o.mover)} não tinha como dar de comer ao adversário. Cada um colheu as sementes da própria fileira.`;
   else if (o.reason === 'impasse') why = `${nameOf(o.mover)} só tinha jogadas que deixariam a partida sem continuidade. Cada um colheu as sementes da própria fileira.`;
-  else why = 'A partida ficou rodando sem colheitas. Cada um colheu as sementes da própria fileira.';
+  else why = 'O final ficou rodando sem colheitas. Cada um colheu as sementes da própria fileira.';
   $('#endWhy').textContent = why;
   endDlg.hidden = false;
   $('#again').focus();
@@ -1390,7 +1393,11 @@ function startGuestPeer() {
     const type = err && err.type;
     if (type === 'peer-unavailable') {
       if (NET.sul || G.screen === 'game') { netUI('bad', 'Seu colega está fora do jogo agora. Tentando de novo…'); reconnectGuest(5000); }
-      else { netUI('bad', `Não achei a partida ${NET.code}. Confira o número com o seu colega.`); stopNet(); }
+      else {
+        netUI('bad', `Não achei a partida ${NET.code}. Confira o número com o seu colega.`);
+        stopNet(); clearOnline();
+        try { history.replaceState(null, '', location.pathname); } catch (e) {}
+      }
       return;
     }
     if (type === 'browser-incompatible') { netUI('bad', 'Este navegador não suporta o modo online. Tente o Chrome ou o Safari atualizados.'); return; }
@@ -1443,7 +1450,13 @@ function reconnectGuest(ms) {
 function receive(msg) {
   if (!msg || typeof msg !== 'object' || typeof msg.t !== 'string') return;
   if (msg.t === 'ping') return;
-  if (msg.t === 'full') { stopNet(); netUI('bad', 'Essa partida já tem dois jogadores.'); show('join'); return; }
+  if (msg.t === 'full') {
+    stopNet(); clearOnline(); resetGame();
+    try { history.replaceState(null, '', location.pathname); } catch (e) {}
+    netUI('bad', 'Essa partida já tem dois jogadores.');
+    show('join');
+    return;
+  }
   if (msg.t === 'bye') {
     NET.alive = false;
     netUI('bad', NET.role === 'guest' ? 'Seu colega encerrou a partida.' : 'Seu colega saiu da partida. Ele pode voltar pelo mesmo número.');
@@ -1570,8 +1583,14 @@ $('#goJoin').addEventListener('click', () => {
   show('join');
   $('#codeIn').focus();
 });
-$('#goRules').addEventListener('click', () => { rulesDlg.hidden = false; rulesDlg.querySelector('[data-close]').focus(); });
-$('#openRules').addEventListener('click', () => { rulesDlg.hidden = false; rulesDlg.querySelector('[data-close]').focus(); });
+function openRules() {
+  rulesDlg.hidden = false;
+  const sheet = rulesDlg.querySelector('.sheet');
+  sheet.scrollTop = 0;
+  sheet.focus({ preventScroll: true });
+}
+$('#goRules').addEventListener('click', openRules);
+$('#openRules').addEventListener('click', openRules);
 $('#goAi').addEventListener('click', () => { if (G.sound) audio(); startAiGame(); });
 $('#resume').addEventListener('click', () => {
   const s = readOnline();
