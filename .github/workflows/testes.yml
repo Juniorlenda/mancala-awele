@@ -1,0 +1,17 @@
+# Roda os testes automáticos das regras a cada atualização do jogo.
+# Se algum teste falhar, o GitHub marca a atualização com um X vermelho e manda e-mail.
+name: Testes
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  regras:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node testes/testar-regras.js

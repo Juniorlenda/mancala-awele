@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Testes extras</title>
+<style>
+  /* Página de teste: não faz parte do jogo. Roda testes de tela, de entradas erradas, de mensagens
+     malucas, de toque duplo, de desfazer, da aula, sem internet e de muitas partidas seguidas. */
+  :root{--bg:#10142a;--fg:#e8ebf6;--muted:#8a95ba;--ok:#6cc59a;--bad:#f0734f;--gold:#eab03f;color-scheme:dark}
+  *{box-sizing:border-box}
+  body{margin:0;padding:12px 16px;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,sans-serif}
+  h1{margin:0 0 8px;font-size:20px}
+  table{border-collapse:collapse;width:100%;max-width:1100px;font-size:13px}
+  td,th{padding:5px 8px;border-bottom:1px solid #2a3360;text-align:left;vertical-align:top}
+  .ok{color:var(--ok)} .bad{color:var(--bad)} .run{color:var(--gold)}
+  #stage{position:absolute;left:-30000px;top:0}
+  #stage iframe{border:0;display:block;margin-bottom:8px}
+</style>
+</head>
+<body>
+<h1>Testes extras</h1>
+<table><thead><tr><th>Grupo</th><th>Teste</th><th>Resultado</th><th>Detalhe</th></tr></thead><tbody id="out"></tbody></table>
+<div id="stage"></div>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+(async () => {
+const BASE = new URL('../index.html', location.href).href;
+const RUN = Math.random().toString(36).slice(2, 6);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const out = document.getElementById('out'), stage = document.getElementById('stage');
+const html = await (await fetch(BASE, { cache: 'no-store' })).text();
+const motor = new Function('performance', html.slice(html.indexOf('/* ===== REGRAS'), html.indexOf('/* ===== ESTADO')) +
+  '\nreturn { play, legal, rebuild, validMoves, rowSum, initialPos };')(performance);
+const SO = new URLSearchParams(location.search).get('so') || '';
+const rodar = g => !SO || SO.split(',').includes(g);
+const T = window.__extras = { total: 0, ok: 0, falhas: [], fim: false, linhas: [] };
+
+function linha(grupo, nome, ok, det = '') {
+  T.total++; if (ok) T.ok++; else T.falhas.push(`${grupo} / ${nome}: ${det}`);
+  T.linhas.push({ grupo, nome, ok, det });
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td></td><td></td><td class="${ok ? 'ok' : 'bad'}">${ok ? 'passou' : 'FALHOU'}</td><td></td>`;
+  tr.children[0].textContent = grupo; tr.children[1].textContent = nome; tr.children[3].textContent = det;
+  out.appendChild(tr);
+}
+const q = (f, s) => { try { return f.contentDocument.querySelector(s); } catch (e) { return null; } };
+const qa = (f, s) => { try { return Array.from(f.contentDocument.querySelectorAll(s)); } catch (e) { return []; } };
+const txt = (f, s) => { const e = q(f, s); return e ? e.textContent : ''; };
+const visible = el => !!el && !el.hidden && !el.closest('[hidden]');
+async function waitFor(fn, ms = 15000) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < ms) { try { const v = fn(); if (v) return v; } catch (e) {} await sleep(60); }
+  return null;
+}
+// abre o jogo num quadro do tamanho pedido; guarda os erros de JavaScript que acontecerem lá dentro
+function abrir({ w = 375, h = 700, query = '', srcdoc = null } = {}) {
+  return new Promise(resolve => {
+    const f = document.createElement('iframe');
+    f.width = w; f.height = h; f.style.width = w + 'px'; f.style.height = h + 'px';
+    f.erros = [];
+    f.addEventListener('load', () => {
+      const win = f.contentWindow;
+      win.addEventListener('error', e => f.erros.push(e.message));
+      win.addEventListener('unhandledrejection', e => f.erros.push(String(e.reason)));
+      resolve(f);
+    }, { once: true });
+    if (srcdoc) f.srcdoc = srcdoc; else f.src = BASE + query;
+    stage.appendChild(f);
+  });
+}
+const fechar = f => f.remove();
+const perfil = p => `perfil=${p}${RUN}`;
+async function iniciarTreino(f) {
+  await waitFor(() => q(f, '#goAi'));
+  q(f, '#goAi').click();
+  await waitFor(() => visible(q(f, '#ritual')));
+  q(f, '.handbtn').click();
+  await waitFor(() => visible(q(f, '#ritGo')));
+  q(f, '#ritGo').click();
+  await waitFor(() => qa(f, '.pit.legal').length, 8000);
+}
+const lances = f => {
+  const out = [];
+  for (const tr of qa(f, '#logBody tr')) for (const td of Array.from(tr.querySelectorAll('td')).slice(1)) { const n = parseInt(td.textContent, 10); if (!isNaN(n)) out.push(n - 1); }
+  return out;
+};
+const tabuleiroDaTela = f => ({ b: qa(f, '.pit .cnt').map(e => parseInt(e.textContent, 10) || 0), s: qa(f, '.store .score').map(e => +e.textContent) });
+function bateComMotor(f) {
+  const m = lances(f);
+  if (!motor.validMoves(m)) return 'súmula com lance ilegal';
+  const R = motor.rebuild(m).pos, t = tabuleiroDaTela(f);
+  if (t.b.join() !== R.b.join()) return `casas ${t.b.join()} ≠ motor ${R.b.join()}`;
+  if (t.s.join() !== R.s.join()) return `depósitos ${t.s.join()} ≠ motor ${R.s.join()}`;
+  return '';
+}
+
+/* ===== 1. TELAS DE VÁRIOS TAMANHOS ===== */
+const TAMANHOS = [[320, 568, 'celular pequeno'], [375, 667, 'celular comum'], [414, 896, 'celular grande'], [812, 375, 'celular deitado'],
+  [768, 1024, 'tablet'], [1280, 800, 'notebook'], [1920, 1080, 'monitor grande']];
+function semRolagemLateral(f) { const d = f.contentDocument.documentElement; return d.scrollWidth <= d.clientWidth + 1; }
+if (rodar('telas')) for (const [w, h, nome] of TAMANHOS) {
+  const f = await abrir({ w, h, query: `?rapido&${perfil('tela' + w)}` });
+  await sleep(300);
+  linha('Telas', `${nome} (${w}×${h}): tela inicial sem rolar para o lado`, semRolagemLateral(f));
+  q(f, '#goRules').click(); await sleep(200);
+  const sheet = q(f, '#rulesDlg .sheet').getBoundingClientRect();
+  linha('Telas', `${nome}: janela de regras cabe na largura`, sheet.left >= 0 && sheet.right <= w + 1, `${Math.round(sheet.left)}–${Math.round(sheet.right)}`);
+  q(f, '#rulesDlg [data-close]').click();
+  await iniciarTreino(f); await sleep(200);
+  const holes = qa(f, '.pit .hole').map(e => e.getBoundingClientRect());
+  const stores = qa(f, '.store .trough').map(e => e.getBoundingClientRect());
+  const dentro = [...holes, ...stores].every(r => r.left >= -1 && r.right <= w + 1);
+  let sobrepoe = false;
+  for (let a = 0; a < holes.length; a++) for (let b = a + 1; b < holes.length; b++) {
+    const A = holes[a], B = holes[b];
+    if (A.left < B.right - 1 && B.left < A.right - 1 && A.top < B.bottom - 1 && B.top < A.bottom - 1) sobrepoe = true;
+  }
+  const menor = Math.min(...holes.map(r => r.width));
+  linha('Telas', `${nome}: tabuleiro inteiro dentro da tela`, dentro && semRolagemLateral(f));
+  linha('Telas', `${nome}: nenhuma casa por cima de outra`, !sobrepoe);
+  linha('Telas', `${nome}: casas grandes o bastante para o dedo (≥ 40 px)`, menor >= 40, `menor casa: ${Math.round(menor)} px`);
+  linha('Telas', `${nome}: sem erro de JavaScript`, f.erros.length === 0, f.erros.join('; '));
+  fechar(f);
+}
+
+/* ===== 2. ENTRADAS ERRADAS E DADOS ESTRAGADOS ===== */
+if (rodar('entradas')) {
+  const f = await abrir({ query: `?rapido&${perfil('entrada')}` });
+  q(f, '#goJoin').click();
+  for (const valor of ['', '12', 'abcd', '12a4', '99999']) {
+    const i = q(f, '#codeIn');
+    i.value = valor; i.dispatchEvent(new Event('input'));
+    q(f, '#joinForm').requestSubmit();
+    await sleep(150);
+    const v = q(f, '#codeIn').value;
+    const recusou = txt(f, '#joinStatus').includes('4 dígitos') || (/^\d{4}$/.test(v));
+    linha('Entradas', `número da partida "${valor}" tratado sem quebrar`, recusou && f.erros.length === 0, `campo ficou "${v}"; aviso: ${txt(f, '#joinStatus')}`);
+  }
+  fechar(f);
+}
+if (rodar('entradas')) for (const [sala, desc] of [['abcd', 'letras'], ['12', 'curto'], ['<b>1</b>', 'com código HTML']]) {
+  const f = await abrir({ query: `?sala=${encodeURIComponent(sala)}&rapido&${perfil('sala')}` });
+  await sleep(300);
+  linha('Entradas', `link com sala inválida (${desc}) abre a tela inicial`, f.contentDocument.body.dataset.screen === 'home' && f.erros.length === 0, f.contentDocument.body.dataset.screen);
+  fechar(f);
+}
+if (rodar('entradas')) {
+  const p = 'estragado' + RUN;
+  const casos = [
+    ['texto quebrado', '{oops'],
+    ['partida de 13 horas atrás', JSON.stringify({ role: 'guest', code: '1234', sul: 'host', moves: [], ts: Date.now() - 13 * 3600e3 })],
+    ['lances impossíveis', JSON.stringify({ role: 'host', code: '1234', sul: 'host', moves: [3, 3, 3, 99], ts: Date.now() })],
+    ['campos faltando', JSON.stringify({ role: 'host' })]
+  ];
+  for (const [desc, valor] of casos) {
+    localStorage.setItem('awele-online-' + p, valor);
+    const f = await abrir({ query: `?rapido&perfil=${p}` });
+    await sleep(300);
+    const card = visible(q(f, '#resumeCard'));
+    let det = card ? `cartão: ${txt(f, '#resumeSub')}` : 'sem cartão';
+    let ok = f.erros.length === 0 && f.contentDocument.body.dataset.screen === 'home';
+    if (desc === 'lances impossíveis' && card) {
+      q(f, '#resume').click(); await sleep(800);
+      ok = ok && f.erros.length === 0 && f.contentDocument.body.dataset.screen !== 'game';
+      det += `; ao voltar foi para "${f.contentDocument.body.dataset.screen}"`;
+    }
+    if (desc !== 'lances impossíveis') ok = ok && !card;
+    linha('Dados guardados', `${desc}: o jogo abre normal`, ok, det + (f.erros.length ? ' | ' + f.erros.join('; ') : ''));
+    fechar(f);
+    localStorage.removeItem('awele-online-' + p);
+  }
+}
+if (rodar('entradas')) {
+  // navegador que não deixa guardar nada (aba anônima com bloqueio)
+  const bloqueio = '<script>Object.defineProperty(window,"localStorage",{get(){throw new Error("armazenamento bloqueado")}});<\/script>';
+  const doc = html.replace('<head>', '<head><base href="' + BASE + '">' + bloqueio).replace('</head>', '</head>');
+  const f = await abrir({ srcdoc: doc.replace('location.search', '"?rapido"') });
+  await sleep(400);
+  let ok = f.contentDocument.body.dataset.screen === 'home';
+  await iniciarTreino(f);
+  const p = qa(f, '.pit.legal')[0]; if (p) p.click();
+  await sleep(1200);
+  ok = ok && lances(f).length >= 1 && f.erros.length === 0;
+  linha('Dados guardados', 'navegador que bloqueia o armazenamento: dá para jogar', ok, f.erros.join('; '));
+  fechar(f);
+}
+
+/* ===== 3. TOQUE DUPLO E TOQUE FORA DA VEZ ===== */
+if (rodar('toques')) {
+  const f = await abrir({ query: `?rapido&${perfil('toque')}` });
+  await iniciarTreino(f);
+  const base = lances(f).length;   // se o computador começou, ele já fez 1 lance
+  let p = qa(f, '.pit.legal')[0];
+  p.click(); p.click(); p.click();
+  await sleep(50);
+  await waitFor(() => qa(f, '.pit.legal').length, 8000);
+  const m = lances(f);
+  linha('Toques', 'tocar 3 vezes seguidas na mesma casa conta um lance só', m.length === base + 2, `súmula: ${m.map(x => x + 1).join(', ')}`);
+  const meu = q(f, '#thS').textContent.includes('você') ? 0 : 1;
+  const doOutro = qa(f, '.pit')[(1 - meu) * 6];
+  doOutro.click(); await sleep(300);
+  linha('Toques', 'tocar numa casa do adversário não faz nada', lances(f).length === base + 2);
+  p = qa(f, '.pit.legal')[0]; p.click();
+  await sleep(10);
+  qa(f, '.pit').forEach(x => x.click());
+  await sleep(50);
+  await waitFor(() => qa(f, '.pit.legal').length, 8000);
+  linha('Toques', 'tocar em tudo enquanto as sementes andam não faz lance extra', lances(f).length === base + 4, `${lances(f).length - base} lances depois do início`);
+  const dif = bateComMotor(f);
+  linha('Toques', 'tabuleiro continua igual ao das regras', !dif && f.erros.length === 0, dif || f.erros.join('; '));
+  fechar(f);
+}
+
+/* ===== 4. DESFAZER CONTRA O COMPUTADOR ===== */
+if (rodar('desfazer')) {
+  const f = await abrir({ query: `?rapido&${perfil('desfazer')}` });
+  let partidas = 0, desfeitos = 0, problema = '';
+  for (let g = 0; g < 15 && !problema; g++) {
+    if (g === 0) await iniciarTreino(f);
+    else { q(f, '#again').click(); await waitFor(() => visible(q(f, '#ritual'))); q(f, '.handbtn').click(); await waitFor(() => visible(q(f, '#ritGo'))); q(f, '#ritGo').click(); }
+    for (let n = 0; n < 400; n++) {
+      if (visible(q(f, '#endDlg'))) break;
+      const legais = qa(f, '.pit.legal');
+      if (!legais.length) { await sleep(20); continue; }
+      if (Math.random() < .12 && !q(f, '#undo').disabled) {
+        const antes = lances(f).length;
+        q(f, '#undo').click(); desfeitos++;
+        await sleep(30);
+        const depois = lances(f).length, dif = bateComMotor(f);
+        if (depois >= antes) problema = `desfazer não voltou lances (${antes} -> ${depois})`;
+        else if (dif) problema = 'depois de desfazer: ' + dif;
+        else if (!/Sua vez/.test(txt(f, '#prompt'))) problema = 'depois de desfazer não ficou na sua vez';
+        if (problema) break;
+        continue;
+      }
+      legais[(Math.random() * legais.length) | 0].click();
+      await waitFor(() => qa(f, '.pit.legal').length || visible(q(f, '#endDlg')), 8000);
+    }
+    if (!problema && visible(q(f, '#endDlg'))) {
+      partidas++;
+      const m = lances(f), pos = motor.rebuild(m).pos;
+      const fim = (pos.s[0] >= 25 || pos.s[1] >= 25) ? pos.s : [pos.s[0] + motor.rowSum(pos.b, 0), pos.s[1] + motor.rowSum(pos.b, 1)];
+      const meu = q(f, '#thS').textContent.includes('você') ? 0 : 1;
+      if (+txt(f, '#endA') !== fim[meu] || +txt(f, '#endB') !== fim[1 - meu]) problema = `placar final ${txt(f, '#endA')}x${txt(f, '#endB')} ≠ regras ${fim[meu]}x${fim[1 - meu]}`;
+    }
+  }
+  linha('Desfazer', `15 partidas contra o computador com ${desfeitos} "desfazer" no meio`, !problema && partidas === 15 && f.erros.length === 0, problema || `${partidas} partidas certas` + (f.erros.length ? ' | ' + f.erros.join('; ') : ''));
+  fechar(f);
+}
+
+/* ===== 5. AULA DAS REGRAS DO COMEÇO AO FIM ===== */
+if (rodar('aula')) {
+  const f = await abrir({ query: `?rapido&${perfil('aula')}` });
+  q(f, '#goRules').click();
+  const casas = () => qa(f, '#lessonBoard .mh .mc').map(e => +e.textContent);
+  const depositos = () => qa(f, '#lessonBoard .ms .mc').map(e => +e.textContent);   // [Norte, Sul]
+  const esperado = [
+    ['O tabuleiro', () => casas().every(n => n === 4)],
+    ['Semear', () => casas().slice(0, 6).join() === '4,0,5,5,5,5'],
+    ['Colher', () => depositos()[1] === 4 && casas()[7] === 0],
+    ['Colheita em sequência', () => depositos()[1] === 13 && casas().slice(6, 9).join() === '0,0,0'],
+    ['Reserva Krou', () => depositos()[1] === 19 && casas()[5] === 0],
+    ['Dar de comer', () => casas()[5] === 0 && casas()[6] === 1],
+    ['Colheita anulada', () => casas().slice(6, 9).join() === '2,3,2' && qa(f, '#lessonBoard .mh.deny').length === 3 && depositos()[1] === 17],
+    ['Fim da partida', () => q(f, '#lessonBoard .ms.win')]
+  ];
+  for (let k = 0; k < esperado.length; k++) {
+    const [titulo, cond] = esperado[k];
+    const ok = await waitFor(() => txt(f, '#lessonTitle') === titulo && cond(), 12000);
+    linha('Aula', `passo ${k + 1}: ${titulo}`, !!ok, ok ? '' : `casas ${casas().join(',')} depósitos ${depositos().join(',')}`);
+    q(f, '#lessonNext').click();
+  }
+  linha('Aula', '"Entendi" fecha a aula e não deixa erro', !visible(q(f, '#rulesDlg')) && f.erros.length === 0, f.erros.join('; '));
+  fechar(f);
+}
+
+/* ===== 6. SEM INTERNET (bibliotecas do modo online fora do ar) ===== */
+if (rodar('internet')) {
+  const quebrado = html.replace('<head>', '<head><base href="' + BASE + '">')
+    .replace('https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js', 'https://sem-internet.invalid/peerjs.js')
+    .replace('https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js', 'https://sem-internet.invalid/qrcode.js')
+    .replace('location.search', '"?rapido"');
+  const f = await abrir({ srcdoc: quebrado });
+  q(f, '#goCreate').click();
+  const aviso = await waitFor(() => /Não consegui carregar/.test(txt(f, '#lobbyStatus')) && txt(f, '#lobbyStatus'), 15000);
+  linha('Sem internet', 'criar partida mostra aviso claro', !!aviso, aviso || txt(f, '#lobbyStatus'));
+  const qr = await waitFor(() => /indisponível/.test(txt(f, '#qr')), 8000);
+  linha('Sem internet', 'no lugar do QR Code aparece o aviso para usar o número', !!qr, txt(f, '#qr'));
+  q(f, '#lobbyBack').click();
+  q(f, '#goJoin').click();
+  const i = q(f, '#codeIn'); i.value = '1234'; i.dispatchEvent(new Event('input')); q(f, '#joinForm').requestSubmit();
+  const aviso2 = await waitFor(() => /Não consegui carregar/.test(txt(f, '#joinStatus')), 15000);
+  linha('Sem internet', 'entrar em partida mostra aviso claro', !!aviso2, txt(f, '#joinStatus'));
+  q(f, '#joinBack').click();
+  await iniciarTreino(f);
+  qa(f, '.pit.legal')[0].click();
+  await sleep(1200);
+  linha('Sem internet', 'treino contra o computador continua funcionando', lances(f).length >= 1 && f.erros.length === 0, f.erros.join('; '));
+  fechar(f);
+}
+
+/* ===== 7. COLEGA "MALICIOSO": mensagens absurdas pela conexão ===== */
+const PREFIX = 'awele-mancala-ufg-';
+const LIXO = [null, 42, 'texto solto', [], { t: 123 }, { t: '<img src=x onerror=alert(1)>' },
+  { t: 'move', n: 'a', i: -5 }, { t: 'move', n: 1, i: 99 }, { t: 'move', n: 9999, i: 2 }, { t: 'move', n: 1, i: 2.5 },
+  { t: 'state', moves: 'lixo', sul: 'host' }, { t: 'state', moves: [99, 99], sul: 'host' }, { t: 'state', moves: Array(5000).fill(0), sul: 'guest' },
+  { t: 'state', moves: [0, 6, 0], sul: 'banana' }, { t: 'start', sul: 'banana', seed: 'x', pick: 'y' }, { t: 'pick', hand: 'meio' },
+  { t: 'ritual' }, { t: 'rematch' }, { t: 'need' }, { t: 'hello', token: { a: 1 }, moves: null, sul: 7 }, { t: 'x'.repeat(5000) }];
+function peerAberto(id) {
+  return new Promise((res, rej) => {
+    const p = id ? new Peer(id, { debug: 0 }) : new Peer({ debug: 0 });
+    p.on('open', () => res(p)); p.on('error', rej);
+    setTimeout(() => rej(new Error('tempo esgotado')), 15000);
+  });
+}
+if (rodar('malicioso')) {
+  // falso convidado contra um anfitrião de verdade
+  const f = await abrir({ query: `?rapido&${perfil('malH')}` });
+  q(f, '#goCreate').click();
+  const code = await waitFor(() => /Esperando/.test(txt(f, '#lobbyStatus')) && txt(f, '#digits'), 20000);
+  let ok = false, det = '';
+  try {
+    const p = await peerAberto();
+    const c = p.connect(PREFIX + code, { reliable: true, serialization: 'json' });
+    const recebidas = [];
+    c.on('data', d => recebidas.push(d));
+    await new Promise((res, rej) => { c.on('open', res); setTimeout(() => rej(new Error('não conectou')), 15000); });
+    c.send({ t: 'hello', token: 'falso', moves: 'lixo', sul: 'xyz' });
+    await sleep(800);
+    for (const m of LIXO) { c.send(m); await sleep(40); }
+    await sleep(1000);
+    c.send({ t: 'pick', hand: 'esq' });
+    const start = await waitFor(() => recebidas.find(d => d && d.t === 'start'), 8000);
+    await sleep(500);
+    const sulEhAnfitriao = start && start.sul === 'host';
+    // se for a vez do falso convidado, manda um lance válido; senão espera o anfitrião jogar
+    if (!sulEhAnfitriao) c.send({ t: 'move', n: 1, i: 0 });
+    else { q(f, '#ritGo').click(); await waitFor(() => qa(f, '.pit.legal').length, 5000); qa(f, '.pit.legal')[0].click(); }
+    await sleep(1500);
+    for (const m of LIXO) { c.send(m); await sleep(30); }
+    await sleep(1500);
+    const dif = bateComMotor(f);
+    ok = !!start && lances(f).length === 1 && !dif && f.erros.length === 0;
+    det = `${lances(f).length} lance(s) na súmula; ${dif || 'tabuleiro certo'}` + (f.erros.length ? ' | ' + f.erros.join('; ') : '');
+    c.close(); p.destroy();
+  } catch (e) { det = 'teste não rodou: ' + e.message; }
+  linha('Colega malicioso', 'anfitrião aguenta mensagens absurdas e segue certo', ok, det);
+  fechar(f);
+}
+if (rodar('malicioso')) {
+  // falso anfitrião contra um convidado de verdade
+  const code = String(1000 + Math.floor(Math.random() * 9000));
+  let ok = false, det = '';
+  try {
+    const p = await peerAberto(PREFIX + code);
+    let conn = null;
+    p.on('connection', c => { conn = c; });
+    const f = await abrir({ query: `?sala=${code}&rapido&${perfil('malC')}` });
+    await waitFor(() => conn && conn.open, 15000);
+    await sleep(500);
+    // "ritual" (novo sorteio) é um pedido legítimo do anfitrião, então fica fora do lixo mandado ao convidado
+    const LIXO_C = LIXO.filter(m => !(m && m.t === 'ritual'));
+    for (const m of LIXO_C) { conn.send(m); await sleep(40); }
+    conn.send({ t: 'ritual' });
+    await sleep(800);
+    conn.send({ t: 'start', sul: 'host', seed: 'esq', pick: 'dir' });   // anfitrião (falso) é o Sul
+    await sleep(800);
+    conn.send({ t: 'move', n: 1, i: 2 });                                // casa 3, válida
+    await sleep(1500);
+    for (const m of LIXO_C) { conn.send(m); await sleep(30); }
+    conn.send({ t: 'move', n: 2, i: 1 });                                // lance do anfitrião fora da vez: deve ser ignorado
+    await sleep(1500);
+    const dif = bateComMotor(f);
+    ok = lances(f).length === 1 && !dif && f.erros.length === 0;
+    det = `${lances(f).length} lance(s); ${dif || 'tabuleiro certo'}` + (f.erros.length ? ' | ' + f.erros.join('; ') : '');
+    fechar(f); p.destroy();
+  } catch (e) { det = 'teste não rodou: ' + e.message; }
+  linha('Colega malicioso', 'convidado aguenta mensagens absurdas e segue certo', ok, det);
+}
+
+/* ===== 8. MUITAS PARTIDAS SEGUIDAS (o jogo não pode ir ficando pesado) ===== */
+if (rodar('pesado')) {
+  const f = await abrir({ w: 414, h: 896, query: `?rapido&${perfil('pesado')}` });
+  await iniciarTreino(f);
+  const contar = () => f.contentDocument.getElementsByTagName('*').length;
+  let n1 = 0, nFim = 0, partidas = 0;
+  for (let g = 0; g < 20; g++) {
+    for (let n = 0; n < 500; n++) {
+      if (visible(q(f, '#endDlg'))) break;
+      const legais = qa(f, '.pit.legal');
+      if (legais.length) legais[(Math.random() * legais.length) | 0].click();
+      await sleep(15);
+    }
+    partidas++;
+    q(f, '#again').click();
+    await waitFor(() => visible(q(f, '#ritual'))); q(f, '.handbtn').click();
+    await waitFor(() => visible(q(f, '#ritGo'))); q(f, '#ritGo').click();
+    await sleep(100);
+    if (g === 0) n1 = contar();   // medido sempre logo no começo de uma partida (súmula vazia)
+  }
+  nFim = contar();
+  const sobras = qa(f, '#fx *').length;
+  linha('Muitas partidas', `${partidas} partidas seguidas sem acumular elementos na página`, Math.abs(nFim - n1) < 120 && sobras === 0 && f.erros.length === 0,
+    `elementos: ${n1} → ${nFim}; sobras de animação: ${sobras}` + (f.erros.length ? ' | ' + f.erros.join('; ') : ''));
+  fechar(f);
+}
+
+/* ===== 9. ACESSIBILIDADE BÁSICA ===== */
+if (rodar('acess')) {
+  const f = await abrir({ query: `?rapido&${perfil('acess')}` });
+  const semNome = qa(f, 'button').filter(b => !(b.textContent.trim() || b.getAttribute('aria-label')));
+  linha('Acessibilidade', 'todo botão tem nome (para leitor de tela)', semNome.length === 0, semNome.map(b => b.id || b.className).join(', '));
+  await iniciarTreino(f);
+  const casasSemNome = qa(f, '.pit').filter(p => !/^Casa \d+, \d+ sementes?$/.test(p.getAttribute('aria-label') || ''));
+  linha('Acessibilidade', 'cada casa diz o número e quantas sementes tem', casasSemNome.length === 0);
+  linha('Acessibilidade', 'casas jogáveis são botões ativos (dá para usar o teclado)', qa(f, '.pit.legal').every(p => p.tagName === 'BUTTON' && !p.disabled));
+  fechar(f);
+}
+
+T.fim = true;
+const tr = document.createElement('tr');
+tr.innerHTML = `<td colspan="4" class="${T.falhas.length ? 'bad' : 'ok'}"><b>${T.ok} de ${T.total} testes passaram</b></td>`;
+out.appendChild(tr);
+})();
+</script>
+</body>
+</html>

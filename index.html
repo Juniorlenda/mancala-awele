@@ -124,6 +124,13 @@ body[data-screen="home"] .top .brand{visibility:hidden}
 .linkish{background:none;border:0;padding:6px 0;color:var(--ink-2);font-weight:700;text-decoration:underline;text-decoration-color:rgba(205,214,255,.35);text-underline-offset:4px;cursor:pointer}
 .linkish:hover{color:var(--ink);text-decoration-color:var(--gold)}
 .home .credit{font-size:12px;color:var(--ink-3);margin:6px 0 0;max-width:60ch}
+/* partida guardada: quem saiu volta de onde parou */
+.resume-card{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 16px;padding:14px 16px;border-radius:12px;border:1px solid rgba(234,176,63,.55);
+  background:linear-gradient(135deg,rgba(234,176,63,.16),rgba(234,176,63,.03) 70%),var(--cloth-2);box-shadow:0 10px 26px rgba(5,8,20,.35);animation:rise .6s cubic-bezier(.2,.8,.2,1) both}
+.rc-text{display:flex;flex-direction:column;gap:3px;min-width:0}
+.rc-text .label{color:var(--gold)}
+.rc-text b{font:400 26px/1.05 var(--f-display);color:var(--ink)}
+.rc-text #resumeSub{font-size:14px;color:var(--ink-2)}
 
 /* ---------- criar / entrar ---------- */
 .panel{max-width:600px;margin:0 auto;display:flex;flex-direction:column;gap:16px;padding-top:4px}
@@ -386,6 +393,17 @@ body[data-screen="home"] .top .brand{visibility:hidden}
 
   <!-- ===== TELA INICIAL ===== -->
   <section class="home" id="home">
+    <div class="resume-card" id="resumeCard" hidden>
+      <div class="rc-text">
+        <span class="label">Partida em andamento</span>
+        <b id="resumeTitle">Partida</b>
+        <span id="resumeSub"></span>
+      </div>
+      <div class="row">
+        <button class="btn primary" id="resume" type="button">Voltar para a partida</button>
+        <button class="btn" id="discard" type="button">Descartar</button>
+      </div>
+    </div>
     <div class="hero">
       <span class="eyebrow">Mancala</span>
       <h1 class="hero-title">Awelé</h1>
@@ -405,7 +423,6 @@ body[data-screen="home"] .top .brand{visibility:hidden}
       <button class="choice" id="goRules" type="button"><span class="ic" aria-hidden="true">?</span><span class="ct">Entender as regras</span><span class="cd">Como semear, colher e vencer, em dois minutos de leitura.</span></button>
     </div>
     <div class="alt">
-      <button class="btn primary" id="resume" type="button" hidden>Voltar para a partida</button>
       <button class="linkish" id="goAi" type="button">Sem ninguém por perto? Treine contra o computador</button>
     </div>
     <p class="credit">Regras do livro Mancala Awelé, da Coleção Jogos de Tabuleiro (Secretaria Municipal de Educação de São Paulo, 2020).</p>
@@ -605,7 +622,9 @@ const logBody = $('#logBody'), logScroll = $('#logScroll'), logEmpty = $('#logEm
 const undoBtn = $('#undo'), hintsBox = $('#hints'), soundBtn = $('#sound'), leaveBtn = $('#leave');
 const rulesDlg = $('#rulesDlg'), endDlg = $('#endDlg'), ritualEl = $('#ritual');
 const fxEl = $('#fx'), confettiEl = $('#confetti'), handSvg = handEl.querySelector('svg');
-const motionOK = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+// ?rapido: modo de teste da bateria automática (sem animações nem esperas)
+const FAST = /[?&]rapido\b/.test(location.search);
+const motionOK = !FAST && !matchMedia('(prefers-reduced-motion: reduce)').matches;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 /* ===== REGRAS (livro Mancala Awelé, SME-SP 2020) =====
@@ -731,7 +750,8 @@ const G = {
   busy: false, gid: 0, event: '', prompt: '', ritualSeed: 'esq'
 };
 const NET = { role: null, code: null, peer: null, conn: null, sul: null, seed: null, token: null, guestToken: null,
-  lastSeen: 0, alive: false, gen: 0, beat: null, retry: null, attempts: 0, inbox: [], ui: { kind: 'wait', text: '' } };
+  lastSeen: 0, alive: false, left: false, ritualPending: false, gen: 0, beat: null, retry: null, attempts: 0, inbox: [], ui: { kind: 'wait', text: '' } };
+const LEFT_TEXT = 'Seu colega saiu da partida. Quando ele tocar em "Voltar para a partida", o jogo continua daqui.';
 const nearSide = () => G.human;
 const isHumanTurn = () => G.pos.turn === G.human;
 const online = () => G.mode === 'online';
@@ -1071,7 +1091,7 @@ function audio() {
   return ac;
 }
 function knock() {
-  if (!G.sound) return;
+  if (!G.sound || FAST) return;
   const a = audio(); if (!a) return;
   if (!noiseBuf) {
     noiseBuf = a.createBuffer(1, Math.floor(a.sampleRate * .05), a.sampleRate);
@@ -1087,7 +1107,7 @@ function knock() {
   o.connect(og); og.connect(a.destination); o.start(t); o.stop(t + .09);
 }
 function chime() {
-  if (!G.sound) return;
+  if (!G.sound || FAST) return;
   const a = audio(); if (!a) return;
   [660, 880, 1100].forEach((f, k) => {
     const t = a.currentTime + k * .07, o = a.createOscillator(), g = a.createGain();
@@ -1167,7 +1187,7 @@ async function animateSow(before, res, from, gid) {
   const store = before.s.slice(), p = before.turn;
   disp[from] = 0; drawPit(from, 0);
   let inHand = n;
-  const step = motionOK ? (n > 11 ? 105 : 165) : 20;
+  const step = FAST ? 1 : motionOK ? (n > 11 ? 150 : 230) : 20;   // tempo da mão em cada casa (ms)
   handN.textContent = inHand; handEl.hidden = false; putHand(from, 0);
   await sleep(step * .6);
   for (const j of res.path) {
@@ -1472,7 +1492,7 @@ function loadScript(src) {
   if (!loadedScripts[src]) {
     loadedScripts[src] = new Promise((res, rej) => {
       const s = document.createElement('script');
-      s.src = src; s.async = true;
+      s.src = src; s.async = true; s.crossOrigin = 'anonymous';   // erros da biblioteca aparecem com detalhe
       s.onload = () => res();
       s.onerror = () => { delete loadedScripts[src]; s.remove(); rej(new Error('load')); };
       document.head.appendChild(s);
@@ -1498,22 +1518,28 @@ function netUI(kind, text) {
   });
   if (G.screen === 'game' && !G.busy) render();
 }
+// aviso de "colega fora": se ele saiu de propósito, diz como ele volta
+function awayUI(text) { netUI('bad', NET.left ? LEFT_TEXT : text); }
+// &perfil=X (só nos testes): cada "aparelho" simulado guarda a partida na sua própria gaveta
+const PERFIL = (/[?&]perfil=([A-Za-z0-9]{1,12})/.exec(location.search) || [])[1];
+const KEY_ONLINE = 'awele-online' + (PERFIL ? '-' + PERFIL : '');
+const KEY_TOKEN = 'awele-token' + (PERFIL ? '-' + PERFIL : '');
 function saveOnline() {
   if (!online()) return;
-  try { localStorage.setItem('awele-online', JSON.stringify({ role: NET.role, code: NET.code, sul: NET.sul, moves: G.moves, guestToken: NET.guestToken, ts: Date.now() })); } catch (e) {}
+  try { localStorage.setItem(KEY_ONLINE, JSON.stringify({ role: NET.role, code: NET.code, sul: NET.sul, moves: G.moves, guestToken: NET.guestToken, ts: Date.now() })); } catch (e) {}
 }
 function readOnline() {
   try {
-    const d = JSON.parse(localStorage.getItem('awele-online') || 'null');
+    const d = JSON.parse(localStorage.getItem(KEY_ONLINE) || 'null');
     if (d && /^\d{4}$/.test(d.code) && Date.now() - d.ts < 12 * 3600e3 && Array.isArray(d.moves)) return d;
   } catch (e) {}
   return null;
 }
-function clearOnline() { try { localStorage.removeItem('awele-online'); } catch (e) {} }
+function clearOnline() { try { localStorage.removeItem(KEY_ONLINE); } catch (e) {} }
 function deviceToken() {
   let t = null;
-  try { t = localStorage.getItem('awele-token'); } catch (e) {}
-  if (!t) { t = Math.random().toString(36).slice(2, 12); try { localStorage.setItem('awele-token', t); } catch (e) {} }
+  try { t = localStorage.getItem(KEY_TOKEN); } catch (e) {}
+  if (!t) { t = Math.random().toString(36).slice(2, 12); try { localStorage.setItem(KEY_TOKEN, t); } catch (e) {} }
   return t;
 }
 
@@ -1522,9 +1548,12 @@ function stopNet() {
   if (NET.beat) clearInterval(NET.beat);
   if (NET.retry) clearTimeout(NET.retry);
   NET.beat = null; NET.retry = null;
-  try { if (NET.conn) NET.conn.close(); } catch (e) {}
-  try { if (NET.peer) NET.peer.destroy(); } catch (e) {}
-  NET.peer = null; NET.conn = null; NET.alive = false; NET.inbox = [];
+  // solta as referências ANTES de fechar: o evento de "conexão fechada" não pode disparar uma reconexão
+  const conn = NET.conn, peer = NET.peer;
+  NET.peer = null; NET.conn = null; NET.alive = false; NET.left = false; NET.ritualPending = false; NET.inbox = [];
+  try { if (conn) conn.close(); } catch (e) {}
+  try { if (peer) peer.destroy(); } catch (e) {}
+  if (NET.retry) { clearTimeout(NET.retry); NET.retry = null; }
 }
 function startBeat() {
   if (NET.beat) clearInterval(NET.beat);
@@ -1532,8 +1561,8 @@ function startBeat() {
     if (NET.conn && NET.conn.open) send({ t: 'ping' });
     if (NET.alive && Date.now() - NET.lastSeen > 13000) {
       NET.alive = false;
-      if (NET.role === 'guest') { netUI('bad', 'Conexão perdida. Tentando reconectar…'); reconnectGuest(); }
-      else netUI('bad', 'Seu colega perdeu a conexão. Esperando ele voltar…');
+      if (NET.role === 'guest') { awayUI('Conexão perdida. Tentando reconectar…'); reconnectGuest(); }
+      else awayUI('Seu colega perdeu a conexão. Esperando ele voltar…');
     }
   }, 4000);
 }
@@ -1611,12 +1640,21 @@ function openHostPeer() {
     }
   });
 }
+// a biblioteca PeerJS quebra por dentro se o outro lado mandar uma mensagem vazia (null);
+// esta proteção descarta a mensagem ruim e deixa as próximas passarem normalmente
+function blindar(conn) {
+  const orig = conn._handleDataMessage;
+  if (typeof orig !== 'function') return conn;
+  conn._handleDataMessage = function (e) { try { return orig.call(this, e); } catch (err) { /* mensagem inválida: ignora */ } };
+  return conn;
+}
 function acceptConn(conn) {
+  blindar(conn);
   conn.on('data', d => onHostData(conn, d));
   conn.on('close', () => {
     if (conn !== NET.conn) return;
     NET.alive = false;
-    netUI('bad', 'Seu colega saiu ou perdeu a conexão. Esperando ele voltar…');
+    awayUI('Seu colega saiu ou perdeu a conexão. Esperando ele voltar…');
   });
   conn.on('error', () => {});
 }
@@ -1632,11 +1670,12 @@ function onHostData(conn, msg) {
     }
     if (old && old !== conn) { try { old.close(); } catch (e) {} }
     NET.conn = conn; NET.guestToken = typeof msg.token === 'string' ? msg.token.slice(0, 20) : null;
-    NET.lastSeen = Date.now(); NET.alive = true;
+    NET.lastSeen = Date.now(); NET.alive = true; NET.left = false;
     netUI('ok', `Conectado com o seu colega · partida ${NET.code}`);
     reconcile(msg);
-    if (!NET.sul) startHostRitual();
-    else send({ t: 'state', moves: G.moves, sul: NET.sul });
+    if (NET.sul) send({ t: 'state', moves: G.moves, sul: NET.sul });
+    else if (NET.ritualPending) send({ t: 'ritual' });   // sorteio já em andamento: só lembra o convidado
+    else startHostRitual();
     saveOnline();
     return;
   }
@@ -1648,6 +1687,7 @@ function onHostData(conn, msg) {
 function startHostRitual() {
   resetGame();
   NET.sul = null;
+  NET.ritualPending = true;
   NET.seed = Math.random() < .5 ? 'esq' : 'dir';
   saveOnline();
   send({ t: 'ritual' });
@@ -1694,7 +1734,7 @@ function startGuestPeer() {
     if (gen !== NET.gen) return;
     const type = err && err.type;
     if (type === 'peer-unavailable') {
-      if (NET.sul || G.screen === 'game') { netUI('bad', 'Seu colega está fora do jogo agora. Tentando de novo…'); reconnectGuest(5000); }
+      if (NET.sul || G.screen === 'game') { awayUI('Seu colega está fora do jogo agora. Quando ele voltar, a partida continua daqui.'); reconnectGuest(5000); }
       else {
         netUI('bad', `Não achei a partida ${NET.code}. Confira o número com o seu colega.`);
         stopNet(); clearOnline();
@@ -1713,34 +1753,34 @@ function startGuestPeer() {
 function connectToHost() {
   if (!NET.peer || NET.peer.destroyed) return;
   if (NET.conn) { try { NET.conn.close(); } catch (e) {} }
-  const conn = NET.peer.connect(ID_PREFIX + NET.code, { reliable: true, serialization: 'json' });
+  const conn = blindar(NET.peer.connect(ID_PREFIX + NET.code, { reliable: true, serialization: 'json' }));
   NET.conn = conn;
   conn.on('open', () => {
     if (conn !== NET.conn) return;
-    NET.lastSeen = Date.now(); NET.alive = true;
+    NET.lastSeen = Date.now(); NET.alive = true; NET.left = false;
     send({ t: 'hello', token: NET.token, moves: G.moves, sul: NET.sul });
     netUI('ok', `Conectado com o seu colega · partida ${NET.code}`);
   });
   conn.on('data', d => {
     if (conn !== NET.conn) return;
     NET.lastSeen = Date.now();
-    if (!NET.alive) { NET.alive = true; netUI('ok', `Conectado com o seu colega · partida ${NET.code}`); }
+    if (!NET.alive) { NET.alive = true; NET.left = false; netUI('ok', `Conectado com o seu colega · partida ${NET.code}`); }
     receive(d);
   });
   conn.on('close', () => {
     if (conn !== NET.conn) return;
     NET.alive = false;
-    netUI('bad', 'Conexão perdida. Tentando reconectar…');
+    awayUI('Conexão perdida. Tentando reconectar…');
     reconnectGuest();
   });
   conn.on('error', () => {});
 }
 function reconnectGuest(ms) {
-  if (NET.role !== 'guest' || NET.retry) return;
+  if (NET.role !== 'guest' || NET.retry || !online()) return;
   const gen = NET.gen;
   NET.retry = setTimeout(() => {
     NET.retry = null;
-    if (gen !== NET.gen || NET.role !== 'guest') return;
+    if (gen !== NET.gen || NET.role !== 'guest' || !online()) return;
     if (!NET.peer || NET.peer.destroyed) { startGuestPeer(); return; }
     if (NET.peer.disconnected) { try { NET.peer.reconnect(); } catch (e) {} reconnectGuest(); return; }
     if (NET.conn && NET.conn.open && NET.alive) return;
@@ -1760,8 +1800,8 @@ function receive(msg) {
     return;
   }
   if (msg.t === 'bye') {
-    NET.alive = false;
-    netUI('bad', NET.role === 'guest' ? 'Seu colega encerrou a partida.' : 'Seu colega saiu da partida. Ele pode voltar pelo mesmo número.');
+    NET.alive = false; NET.left = true;
+    netUI('bad', LEFT_TEXT);
     return;
   }
   NET.inbox.push(msg);
@@ -1794,7 +1834,10 @@ function handleMsg(m) {
       applyRemoteMove(m);
       return;
     case 'rematch':
-      if (NET.role === 'host') { if (NET.sul) startHostRitual(); else send({ t: 'ritual' }); }
+      // revanche só com a partida terminada: um pedido atrasado não pode zerar um jogo em andamento
+      if (NET.role !== 'host') return;
+      if (!NET.sul) send({ t: 'ritual' });
+      else if (G.over) startHostRitual();
       return;
   }
 }
@@ -1802,6 +1845,7 @@ function applyStart(m) {
   if (m.sul !== 'host' && m.sul !== 'guest') return;
   resetGame();
   NET.sul = m.sul;
+  NET.ritualPending = false;
   G.human = mySide();
   saveOnline();
   const hit = m.pick === m.seed;
@@ -1824,6 +1868,8 @@ function reconcile(r) {
   const rs = r.sul === 'host' || r.sul === 'guest' ? r.sul : null;
   const rm = Array.isArray(r.moves) ? r.moves : [];
   if (!rs || !validMoves(rm)) return;
+  // anfitrião no meio de um sorteio novo (revanche): estado antigo do convidado não vale mais
+  if (NET.role === 'host' && NET.ritualPending) { send({ t: 'ritual' }); return; }
   let adopt = false;
   if (!NET.sul) adopt = true;
   else if (rs === NET.sul) {
@@ -1837,6 +1883,7 @@ function reconcile(r) {
 }
 function applyMoves(list, silent) {
   G.gid++; G.busy = false; hideHand();
+  NET.ritualPending = false;
   const R = rebuild(list);
   Object.assign(G, { moves: list.slice(), pos: R.pos, log: R.log, reps: R.reps, quiet: R.quiet, over: null, hist: [], legal: null });
   G.human = mySide();
@@ -1858,13 +1905,15 @@ function applyRemoteMove(m) {
   playOther(i, 'remote');
 }
 
+// sair de uma partida online só pausa: ela fica guardada para voltar pela tela inicial
 function leaveGame() {
   G.gid++; G.busy = false; hideHand();
   ritualEl.hidden = true; endDlg.hidden = true;
   if (online()) {
+    saveOnline();
     send({ t: 'bye' });
-    setTimeout(stopNet, 300);
-    clearOnline();
+    const gen = NET.gen;   // espera o "tchau" sair, mas não derruba uma conexão nova se ele voltar rápido
+    setTimeout(() => { if (gen === NET.gen) stopNet(); }, 300);
   }
   G.mode = 'ai';
   try { history.replaceState(null, '', location.pathname); } catch (e) {}
@@ -1874,9 +1923,21 @@ function leaveGame() {
 
 /* ===== BOTÕES ===== */
 function refreshResume() {
-  const s = readOnline(), b = $('#resume');
-  b.hidden = !s;
-  if (s) b.textContent = `Voltar para a partida ${s.code}`;
+  const s = readOnline(), card = $('#resumeCard');
+  card.hidden = !s;
+  if (!s) return;
+  $('#resumeTitle').textContent = `Partida ${s.code}`;
+  let sub = 'Você saiu, mas dá para voltar de onde parou.';
+  if (!s.sul) sub = s.role === 'host' ? 'Seu colega ainda vai entrar ou sortear quem começa.' : 'Falta sortear quem começa.';
+  else if (validMoves(s.moves)) {
+    const R = rebuild(s.moves), me = s.sul === s.role ? 0 : 1;
+    const ended = R.pos.s[0] >= 25 || R.pos.s[1] >= 25 || !legal(R.pos).moves.length;
+    const placar = `Você ${R.pos.s[me]} × ${R.pos.s[1 - me]} Colega`;
+    sub = ended ? `${placar} · partida encerrada` : `${placar} · ${R.pos.turn === me ? 'sua vez' : 'vez do colega'}`;
+  }
+  $('#resumeSub').textContent = sub;
+  const d = $('#discard');
+  d.textContent = 'Descartar'; d.classList.remove('warn');
 }
 $('#goCreate').addEventListener('click', () => { if (G.sound) audio(); hostGame(null); });
 $('#goJoin').addEventListener('click', () => {
@@ -2040,7 +2101,20 @@ $('#goAi').addEventListener('click', () => { if (G.sound) audio(); startAiGame()
 $('#resume').addEventListener('click', () => {
   const s = readOnline();
   if (!s) return refreshResume();
+  if (G.sound) audio();
   if (s.role === 'host') hostGame(s); else joinGame(s.code, s);
+});
+let discardArmed = null;
+$('#discard').addEventListener('click', () => {
+  const d = $('#discard');
+  if (discardArmed) {
+    clearTimeout(discardArmed); discardArmed = null;
+    clearOnline(); refreshResume();
+    return;
+  }
+  d.textContent = 'Toque de novo para descartar';
+  d.classList.add('warn');
+  discardArmed = setTimeout(() => { discardArmed = null; d.textContent = 'Descartar'; d.classList.remove('warn'); }, 3000);
 });
 $('#lobbyBack').addEventListener('click', () => { stopNet(); clearOnline(); G.mode = 'ai'; show('home'); refreshResume(); });
 $('#joinBack').addEventListener('click', () => {

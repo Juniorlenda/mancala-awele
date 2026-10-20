@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bateria online</title>
+<style>
+  /* Página de teste: não faz parte do jogo. Abre duplas de jogadores (cada dupla = 2 "celulares")
+     em quadros lado a lado, joga partidas online inteiras e confere se os dois lados batem. */
+  :root{--bg:#10142a;--fg:#e8ebf6;--muted:#8a95ba;--ok:#6cc59a;--bad:#f0734f;--gold:#eab03f;color-scheme:dark}
+  *{box-sizing:border-box}
+  body{margin:0;padding:12px 16px;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,sans-serif}
+  h1{margin:0 0 6px;font-size:20px}
+  .sum{display:flex;flex-wrap:wrap;gap:8px 18px;margin:6px 0 12px;font-variant-numeric:tabular-nums}
+  .sum b{color:var(--gold)}
+  .pairs{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+  .pair{border:1px solid #2a3360;border-radius:8px;padding:6px}
+  .pair h2{margin:0 0 4px;font-size:12px;color:var(--muted);font-weight:600}
+  .frames{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+  iframe{width:100%;height:300px;border:0;border-radius:4px;background:#000}
+  pre{white-space:pre-wrap;font:12px/1.4 ui-monospace,Consolas,monospace;color:var(--muted);max-height:40vh;overflow:auto}
+  .bad{color:var(--bad)} .good{color:var(--ok)}
+</style>
+</head>
+<body>
+<h1>Bateria de partidas online</h1>
+<div class="sum" id="sum"></div>
+<div class="pairs" id="pairs"></div>
+<pre id="log"></pre>
+<script>
+(async () => {
+const params = new URLSearchParams(location.search);
+const TOTAL = +(params.get('partidas') || 100);   // quantas partidas no total
+const PARES = +(params.get('pares') || 4);        // quantas duplas jogando ao mesmo tempo
+const BASE = new URL('../index.html', location.href).href;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const logEl = document.getElementById('log'), sumEl = document.getElementById('sum'), pairsEl = document.getElementById('pairs');
+
+// motor de regras do próprio jogo, para conferir cada partida por fora
+const html = await (await fetch(BASE, { cache: 'no-store' })).text();
+const motor = new Function('performance', html.slice(html.indexOf('/* ===== REGRAS'), html.indexOf('/* ===== ESTADO')) +
+  '\nreturn { play, legal, rebuild, validMoves, rowSum };')(performance);
+
+const R = window.__bateria = {
+  iniciadas: 0, terminadas: 0, conferidas: 0, problemas: [], travadas: 0, erros: [],
+  lances: 0, fins: {}, inicio: Date.now(), fim: null
+};
+const log = (msg, cls) => {
+  const line = document.createElement('div');
+  if (cls) line.className = cls;
+  line.textContent = `[${((Date.now() - R.inicio) / 1000).toFixed(0)}s] ${msg}`;
+  logEl.prepend(line);
+};
+function resumo() {
+  const min = ((Date.now() - R.inicio) / 60000).toFixed(1);
+  sumEl.innerHTML = `<span>Partidas: <b>${R.terminadas}</b> de ${TOTAL}</span><span>Conferidas sem erro: <b>${R.conferidas}</b></span>` +
+    `<span>Problemas: <b>${R.problemas.length}</b></span><span>Travadas: <b>${R.travadas}</b></span>` +
+    `<span>Erros de JavaScript: <b>${R.erros.length}</b></span><span>Lances: ${R.lances}</span><span>Tempo: ${min} min</span>`;
+}
+setInterval(resumo, 1000);
+
+const q = (f, s) => { try { return f.contentDocument && f.contentDocument.querySelector(s); } catch (e) { return null; } };
+const qa = (f, s) => { try { return Array.from(f.contentDocument.querySelectorAll(s)); } catch (e) { return []; } };
+const visible = el => !!el && !el.hidden && !el.closest('[hidden]');
+async function waitFor(fn, ms = 20000) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < ms) { try { const v = fn(); if (v) return v; } catch (e) {} await sleep(60); }
+  return null;
+}
+function frame(url, box, nome) {
+  const f = document.createElement('iframe');
+  f.addEventListener('load', () => {
+    const w = f.contentWindow;
+    w.addEventListener('error', e => { R.erros.push(`${nome}: ${e.message}`); log(`ERRO JS ${nome}: ${e.message}`, 'bad'); });
+    w.addEventListener('unhandledrejection', e => { R.erros.push(`${nome}: ${e.reason}`); log(`ERRO JS ${nome}: ${e.reason}`, 'bad'); });
+  });
+  f.src = url;
+  box.appendChild(f);
+  return f;
+}
+
+// lê o tabuleiro da tela (casas na ordem 1..12) e escolhe um lance: 70% a que colhe mais
+function escolher(f) {
+  const pits = qa(f, '.pit');
+  const legais = pits.filter(p => p.classList.contains('legal') && !p.disabled);
+  if (!legais.length) return null;
+  const b = pits.map(p => parseInt(p.querySelector('.cnt').textContent, 10) || 0);
+  const idx = legais.map(p => pits.indexOf(p));
+  const turn = idx[0] < 6 ? 0 : 1;
+  const op = idx.map(i => ({ i, t: motor.play({ b, s: [0, 0], turn }, i).taken }));
+  const melhor = Math.max(...op.map(o => o.t));
+  const pool = melhor > 0 && Math.random() < .7 ? op.filter(o => o.t === melhor) : op;
+  return pits[pool[(Math.random() * pool.length) | 0].i];
+}
+// súmula da tela -> lista de lances (casas 1..12 viram 0..11)
+function lancesDaSumula(f) {
+  const out = [];
+  for (const tr of qa(f, '#logBody tr')) {
+    const tds = tr.querySelectorAll('td');
+    for (const td of [tds[1], tds[2]]) {
+      const n = parseInt(td.textContent, 10);
+      if (!isNaN(n)) out.push(n - 1);
+    }
+  }
+  return out;
+}
+// confere uma partida terminada: os dois lados iguais e iguais ao motor de regras
+function conferir(H, C, dupla) {
+  const erros = [];
+  const sH = q(H, '#logBody').textContent, sC = q(C, '#logBody').textContent;
+  if (sH !== sC) erros.push('súmulas diferentes nos dois celulares');
+  const moves = lancesDaSumula(H);
+  if (!motor.validMoves(moves)) erros.push('a súmula tem lance ilegal');
+  const RB = motor.rebuild(moves), pos = RB.pos;
+  const final = (pos.s[0] >= 25 || pos.s[1] >= 25) ? pos.s.slice() : [pos.s[0] + motor.rowSum(pos.b, 0), pos.s[1] + motor.rowSum(pos.b, 1)];
+  const hostSul = q(H, '#thS').textContent.includes('você');
+  const hostLado = hostSul ? 0 : 1;
+  const hA = +q(H, '#endA').textContent, hB = +q(H, '#endB').textContent;
+  const cA = +q(C, '#endA').textContent, cB = +q(C, '#endB').textContent;
+  if (hA !== final[hostLado] || hB !== final[1 - hostLado]) erros.push(`placar do anfitrião ${hA}x${hB}, o motor diz ${final[hostLado]}x${final[1 - hostLado]}`);
+  if (cA !== hB || cB !== hA) erros.push(`placares não batem: anfitrião ${hA}x${hB}, convidado ${cA}x${cB}`);
+  const tH = q(H, '#endTitle').textContent, tC = q(C, '#endTitle').textContent;
+  const okTitulo = (tH === 'Empate' && tC === 'Empate') || (tH === 'Você venceu!' && tC === 'Seu colega venceu') || (tH === 'Seu colega venceu' && tC === 'Você venceu!');
+  if (!okTitulo) erros.push(`títulos não combinam: "${tH}" e "${tC}"`);
+  const motivo = q(H, '#endWhy').textContent.split(' ').slice(0, 4).join(' ');
+  R.fins[motivo] = (R.fins[motivo] || 0) + 1;
+  R.lances += moves.length;
+  if (erros.length) { R.problemas.push({ dupla, moves, erros }); log(`PROBLEMA dupla ${dupla}: ${erros.join('; ')}`, 'bad'); }
+  else { R.conferidas++; log(`dupla ${dupla}: partida ok (${moves.length} lances, ${hA}x${hB})`, 'good'); }
+}
+
+async function dupla(n) {
+  while (R.iniciadas < TOTAL) {
+    const box = document.createElement('div');
+    box.className = 'pair';
+    box.innerHTML = `<h2>Dupla ${n}</h2><div class="frames"></div>`;
+    pairsEl.appendChild(box);
+    const fr = box.querySelector('.frames');
+    const H = frame(BASE + '?rapido', fr, `anfitrião ${n}`);
+    await waitFor(() => q(H, '#goCreate'));
+    q(H, '#goCreate').click();
+    const code = await waitFor(() => {
+      const d = q(H, '#digits'), st = q(H, '#lobbyStatus');
+      return d && st && /Esperando/.test(st.textContent) && /^\d{4}$/.test(d.textContent) ? d.textContent : null;
+    }, 30000);
+    if (!code) { log(`dupla ${n}: não conseguiu criar a partida`, 'bad'); R.travadas++; box.remove(); await sleep(2000); continue; }
+    const C = frame(`${BASE}?sala=${code}&rapido`, fr, `convidado ${n}`);
+    log(`dupla ${n}: partida ${code} criada`);
+
+    let assinatura = '', ultimoProgresso = Date.now(), emJogo = false;
+    while (true) {
+      // sorteio da mão e botão "Ir para o tabuleiro"
+      for (const f of [H, C]) {
+        if (!visible(q(f, '#ritual'))) continue;
+        const go = q(f, '#ritGo');
+        if (visible(go)) { go.click(); continue; }
+        const maos = qa(f, '.handbtn').filter(b => !b.disabled);
+        if (maos.length) maos[(Math.random() * maos.length) | 0].click();
+      }
+      // lances
+      for (const f of [H, C]) {
+        if (visible(q(f, '#endDlg'))) continue;
+        const p = escolher(f);
+        if (p) { if (!emJogo) { emJogo = true; R.iniciadas++; } p.click(); }
+      }
+      // fim de partida nos dois lados
+      if (emJogo && visible(q(H, '#endDlg')) && visible(q(C, '#endDlg'))) {
+        await sleep(150);
+        conferir(H, C, n);
+        R.terminadas++;
+        emJogo = false;
+        if (R.iniciadas >= TOTAL) break;
+        q(H, '#again').click();
+        await waitFor(() => !visible(q(C, '#endDlg')), 15000);
+      }
+      // travou? (nada muda na tela por 25 s)
+      const sig = [q(H, '#logBody'), q(C, '#logBody'), q(H, '#prompt'), q(C, '#prompt'), q(H, '#netStatus'), q(C, '#netStatus')]
+        .map(e => e ? e.textContent : '').join('|');
+      if (sig !== assinatura) { assinatura = sig; ultimoProgresso = Date.now(); }
+      else if (Date.now() - ultimoProgresso > 25000) {
+        R.travadas++;
+        if (emJogo) { R.iniciadas--; emJogo = false; }
+        log(`TRAVOU dupla ${n} (partida ${code}): anfitrião "${q(H, '#prompt')?.textContent}" / "${q(H, '#netStatus')?.textContent}"; convidado "${q(C, '#prompt')?.textContent}" / "${q(C, '#netStatus')?.textContent}"`, 'bad');
+        break;
+      }
+      await sleep(40);
+    }
+    box.remove();
+    await sleep(500);
+  }
+}
+
+log(`começando: ${TOTAL} partidas com ${PARES} duplas`);
+await Promise.all(Array.from({ length: PARES }, (_, k) => sleep(k * 1500).then(() => dupla(k + 1))));
+R.fim = Date.now();
+resumo();
+log(`FIM: ${R.terminadas} partidas, ${R.conferidas} conferidas sem erro, ${R.problemas.length} problemas, ${R.travadas} travadas, ${R.erros.length} erros de JavaScript`,
+  R.problemas.length || R.travadas || R.erros.length ? 'bad' : 'good');
+})();
+</script>
+</body>
+</html>

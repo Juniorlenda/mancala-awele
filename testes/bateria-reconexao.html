@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bateria de reconexão</title>
+<style>
+  /* Página de teste: não faz parte do jogo. Cada dupla junta um "celular" (tela estreita) e um
+     "computador" (tela larga). No meio das partidas, o robô fecha e reabre o jogo, sai e volta,
+     e confere se os dois lados continuam iguais. */
+  :root{--bg:#10142a;--fg:#e8ebf6;--muted:#8a95ba;--ok:#6cc59a;--bad:#f0734f;--gold:#eab03f;color-scheme:dark}
+  *{box-sizing:border-box}
+  body{margin:0;padding:12px 16px;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,sans-serif}
+  h1{margin:0 0 6px;font-size:20px}
+  .sum{display:flex;flex-wrap:wrap;gap:8px 18px;margin:6px 0 12px;font-variant-numeric:tabular-nums}
+  .sum b{color:var(--gold)}
+  .pair{border:1px solid #2a3360;border-radius:8px;padding:6px;margin-bottom:10px}
+  .pair h2{margin:0 0 4px;font-size:12px;color:var(--muted);font-weight:600}
+  .frames{display:flex;flex-wrap:wrap;gap:6px;align-items:flex-start}
+  iframe{border:0;border-radius:4px;background:#000}
+  iframe.phone{width:360px;height:640px}
+  iframe.pc{width:760px;height:460px}
+  pre{white-space:pre-wrap;font:12px/1.4 ui-monospace,Consolas,monospace;color:var(--muted);max-height:45vh;overflow:auto}
+  .bad{color:var(--bad)} .good{color:var(--ok)}
+</style>
+</head>
+<body>
+<h1>Bateria de reconexão</h1>
+<div class="sum" id="sum"></div>
+<pre id="log"></pre>
+<div id="pairs"></div>
+<script>
+(async () => {
+const params = new URLSearchParams(location.search);
+const TOTAL = +(params.get('partidas') || 30);
+const PARES = +(params.get('pares') || 2);
+const RUN = Math.random().toString(36).slice(2, 6);
+const BASE = new URL('../index.html', location.href).href;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const rand = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const logEl = document.getElementById('log'), sumEl = document.getElementById('sum'), pairsEl = document.getElementById('pairs');
+
+const html = await (await fetch(BASE, { cache: 'no-store' })).text();
+const motor = new Function('performance', html.slice(html.indexOf('/* ===== REGRAS'), html.indexOf('/* ===== ESTADO')) +
+  '\nreturn { play, legal, rebuild, validMoves, rowSum };')(performance);
+
+const R = window.__reconexao = {
+  iniciadas: 0, terminadas: 0, conferidas: 0, problemas: [], travadas: 0, erros: [],
+  eventos: 0, eventosOk: 0, falhas: [], tipos: {}, tempos: [], lances: 0, inicio: Date.now(), fim: null
+};
+const log = (msg, cls) => {
+  const line = document.createElement('div');
+  if (cls) line.className = cls;
+  line.textContent = `[${((Date.now() - R.inicio) / 1000).toFixed(0)}s] ${msg}`;
+  logEl.prepend(line);
+};
+function resumo() {
+  const t = R.tempos.length ? (R.tempos.reduce((a, b) => a + b, 0) / R.tempos.length / 1000).toFixed(1) : '-';
+  sumEl.innerHTML = `<span>Partidas: <b>${R.terminadas}</b> de ${TOTAL}</span><span>Conferidas: <b>${R.conferidas}</b></span>` +
+    `<span>Quedas provocadas: <b>${R.eventos}</b></span><span>Reconectou: <b>${R.eventosOk}</b></span><span>Falhas: <b>${R.falhas.length}</b></span>` +
+    `<span>Problemas: <b>${R.problemas.length}</b></span><span>Travadas: <b>${R.travadas}</b></span><span>Erros JS: <b>${R.erros.length}</b></span>` +
+    `<span>Tempo médio para voltar: ${t} s</span><span>${((Date.now() - R.inicio) / 60000).toFixed(1)} min</span>`;
+}
+setInterval(resumo, 1000);
+
+const q = (f, s) => { try { return f.contentDocument && f.contentDocument.querySelector(s); } catch (e) { return null; } };
+const qa = (f, s) => { try { return Array.from(f.contentDocument.querySelectorAll(s)); } catch (e) { return []; } };
+const txt = (f, s) => { const e = q(f, s); return e ? e.textContent : ''; };
+const visible = el => !!el && !el.hidden && !el.closest('[hidden]');
+async function waitFor(fn, ms = 20000) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < ms) { try { const v = fn(); if (v) return v; } catch (e) {} await sleep(80); }
+  return null;
+}
+function frame(url, box, nome, tipo) {
+  const f = document.createElement('iframe');
+  f.className = tipo;
+  f.title = nome;
+  f.addEventListener('load', () => {
+    const w = f.contentWindow;
+    w.addEventListener('error', e => { R.erros.push(`${nome}: ${e.message}`); log(`ERRO JS ${nome}: ${e.message}`, 'bad'); });
+    w.addEventListener('unhandledrejection', e => { R.erros.push(`${nome}: ${e.reason}`); log(`ERRO JS ${nome}: ${e.reason}`, 'bad'); });
+  });
+  f.src = url;
+  box.appendChild(f);
+  return f;
+}
+function escolher(f) {
+  const pits = qa(f, '.pit');
+  const legais = pits.filter(p => p.classList.contains('legal') && !p.disabled);
+  if (!legais.length) return null;
+  const b = pits.map(p => parseInt(p.querySelector('.cnt').textContent, 10) || 0);
+  const idx = legais.map(p => pits.indexOf(p));
+  const turn = idx[0] < 6 ? 0 : 1;
+  const op = idx.map(i => ({ i, t: motor.play({ b, s: [0, 0], turn }, i).taken }));
+  const melhor = Math.max(...op.map(o => o.t));
+  const pool = melhor > 0 && Math.random() < .7 ? op.filter(o => o.t === melhor) : op;
+  return pits[pool[(Math.random() * pool.length) | 0].i];
+}
+function lancesDaSumula(f) {
+  const out = [];
+  for (const tr of qa(f, '#logBody tr')) {
+    const tds = tr.querySelectorAll('td');
+    for (const td of [tds[1], tds[2]]) { const n = parseInt(td.textContent, 10); if (!isNaN(n)) out.push(n - 1); }
+  }
+  return out;
+}
+const conectado = f => txt(f, '#netStatus').startsWith('Conectado');
+const ocupado = f => /emeando|pensando/.test(txt(f, '#prompt'));
+const emPartida = f => visible(q(f, '#game')) && !visible(q(f, '#ritual'));
+const sincronizados = (H, C) => txt(H, '#logBody') === txt(C, '#logBody');
+
+function conferir(H, C, dupla) {
+  const erros = [];
+  if (!sincronizados(H, C)) erros.push('súmulas diferentes nos dois aparelhos');
+  const moves = lancesDaSumula(H);
+  if (!motor.validMoves(moves)) erros.push('a súmula tem lance ilegal');
+  const pos = motor.rebuild(moves).pos;
+  const final = (pos.s[0] >= 25 || pos.s[1] >= 25) ? pos.s.slice() : [pos.s[0] + motor.rowSum(pos.b, 0), pos.s[1] + motor.rowSum(pos.b, 1)];
+  const hostLado = txt(H, '#thS').includes('você') ? 0 : 1;
+  const hA = +txt(H, '#endA'), hB = +txt(H, '#endB'), cA = +txt(C, '#endA'), cB = +txt(C, '#endB');
+  if (hA !== final[hostLado] || hB !== final[1 - hostLado]) erros.push(`placar ${hA}x${hB}, o motor diz ${final[hostLado]}x${final[1 - hostLado]}`);
+  if (cA !== hB || cB !== hA) erros.push(`placares não batem: ${hA}x${hB} e ${cA}x${cB}`);
+  R.lances += moves.length;
+  if (erros.length) { R.problemas.push({ dupla, moves, erros }); log(`PROBLEMA dupla ${dupla}: ${erros.join('; ')}`, 'bad'); }
+  else { R.conferidas++; log(`dupla ${dupla}: partida conferida (${moves.length} lances, ${hA}x${hB})`, 'good'); }
+}
+
+// ---- as quedas ----
+const TIPOS = ['recarregar o convidado', 'recarregar o anfitrião', 'convidado sai e volta', 'anfitrião sai e volta', 'os dois recarregam', 'caos: cai no meio do lance'];
+async function voltarPeloCartao(f) {
+  const b = await waitFor(() => visible(q(f, '#resumeCard')) && q(f, '#resume'), 15000);
+  if (!b) return false;
+  b.click();
+  return true;
+}
+function sair(f) { const b = q(f, '#leave'); if (b) { b.click(); b.click(); } }
+async function evento(tipo, P, dupla) {
+  const { H, C } = P;
+  R.eventos++; R.tipos[tipo] = (R.tipos[tipo] || 0) + 1;
+  const antes = lancesDaSumula(H).length;
+  const t0 = Date.now();
+  let passo = true;
+  if (tipo === 'recarregar o convidado') {
+    C.src = P.guestURL + '&r=' + Date.now();
+  } else if (tipo === 'recarregar o anfitrião') {
+    H.src = P.hostURL + '&r=' + Date.now();
+    passo = await voltarPeloCartao(H);
+  } else if (tipo === 'convidado sai e volta') {
+    sair(C); await sleep(rand(300, 3000)); passo = await voltarPeloCartao(C);
+  } else if (tipo === 'anfitrião sai e volta') {
+    sair(H); await sleep(rand(300, 3000)); passo = await voltarPeloCartao(H);
+  } else if (tipo === 'os dois recarregam') {
+    H.src = P.hostURL + '&r=' + Date.now();
+    C.src = P.guestURL + '&r=' + Date.now();
+    passo = await voltarPeloCartao(H);
+  } else {
+    // caos: quem estiver na vez joga e o aparelho "cai" logo em seguida, com o lance ainda viajando
+    const vez = escolher(C) ? 'C' : escolher(H) ? 'H' : null;
+    const f = vez === 'C' ? C : H;
+    const p = escolher(f);
+    if (p) p.click();
+    await sleep(rand(0, 250));
+    if (vez === 'C') C.src = P.guestURL + '&r=' + Date.now();
+    else { H.src = P.hostURL + '&r=' + Date.now(); passo = await voltarPeloCartao(H); }
+  }
+  const ok = passo && await waitFor(() => conectado(H) && conectado(C) && sincronizados(H, C) && !ocupado(H) && !ocupado(C) &&
+    (visible(q(H, '#endDlg')) || emPartida(H)) && (visible(q(C, '#endDlg')) || emPartida(C)), 45000);
+  const depois = lancesDaSumula(H).length;
+  if (!ok) {
+    R.falhas.push({ dupla, tipo, anfitriao: [txt(H, '#prompt'), txt(H, '#netStatus')], convidado: [txt(C, '#prompt'), txt(C, '#netStatus')] });
+    log(`FALHOU "${tipo}" (dupla ${dupla}): anfitrião "${txt(H, '#netStatus')}" / convidado "${txt(C, '#netStatus')}"`, 'bad');
+    return false;
+  }
+  if (depois < antes) {
+    R.problemas.push({ dupla, erros: [`"${tipo}" perdeu lances: ${antes} -> ${depois}`] });
+    log(`PROBLEMA "${tipo}": a partida voltou com menos lances (${antes} -> ${depois})`, 'bad');
+  }
+  R.eventosOk++; R.tempos.push(Date.now() - t0);
+  log(`dupla ${dupla}: "${tipo}" ok, voltou em ${((Date.now() - t0) / 1000).toFixed(1)} s`, 'good');
+  return true;
+}
+
+async function dupla(n) {
+  const celularEAnfitriao = n % 2 === 0;
+  let tentativa = 0;
+  while (R.iniciadas < TOTAL) {
+    tentativa++;
+    const box = document.createElement('div');
+    box.className = 'pair';
+    box.innerHTML = `<h2>Dupla ${n}: anfitrião no ${celularEAnfitriao ? 'celular' : 'computador'}, convidado no ${celularEAnfitriao ? 'computador' : 'celular'}</h2><div class="frames"></div>`;
+    pairsEl.appendChild(box);
+    const fr = box.querySelector('.frames');
+    const P = { hostURL: `${BASE}?rapido&perfil=H${n}${RUN}${tentativa}` };
+    P.H = frame(P.hostURL, fr, `anfitrião ${n}`, celularEAnfitriao ? 'phone' : 'pc');
+    await waitFor(() => q(P.H, '#goCreate'));
+    q(P.H, '#goCreate').click();
+    const code = await waitFor(() => /Esperando/.test(txt(P.H, '#lobbyStatus')) && /^\d{4}$/.test(txt(P.H, '#digits')) ? txt(P.H, '#digits') : null, 30000);
+    if (!code) { log(`dupla ${n}: não conseguiu criar a partida`, 'bad'); R.travadas++; box.remove(); await sleep(2000); continue; }
+    P.guestURL = `${BASE}?sala=${code}&rapido&perfil=C${n}${RUN}${tentativa}`;
+    P.C = frame(P.guestURL, fr, `convidado ${n}`, celularEAnfitriao ? 'pc' : 'phone');
+    const { H, C } = P;
+    log(`dupla ${n}: partida ${code} criada`);
+
+    let assinatura = '', ultimoProgresso = Date.now(), emJogo = false, proximo = rand(5, 12), quedaNoSorteio = false;
+    while (true) {
+      // às vezes o convidado cai bem na hora do sorteio da mão
+      if (!quedaNoSorteio && visible(q(C, '#ritual')) && qa(C, '.handbtn').some(b => !b.disabled) && Math.random() < .3) {
+        quedaNoSorteio = true;
+        R.eventos++; R.tipos['cai no sorteio'] = (R.tipos['cai no sorteio'] || 0) + 1;
+        const t0 = Date.now();
+        C.src = P.guestURL + '&r=' + Date.now();
+        const ok = await waitFor(() => conectado(C) && visible(q(C, '#ritual')) && qa(C, '.handbtn').some(b => !b.disabled), 30000);
+        if (ok) { R.eventosOk++; R.tempos.push(Date.now() - t0); log(`dupla ${n}: "cai no sorteio" ok`, 'good'); }
+        else { R.falhas.push({ dupla: n, tipo: 'cai no sorteio', convidado: [txt(C, '#prompt'), txt(C, '#netStatus')] }); log(`FALHOU "cai no sorteio" (dupla ${n})`, 'bad'); break; }
+      }
+      for (const f of [H, C]) {
+        if (!visible(q(f, '#ritual'))) continue;
+        const go = q(f, '#ritGo');
+        if (visible(go)) { go.click(); continue; }
+        const maos = qa(f, '.handbtn').filter(b => !b.disabled);
+        if (maos.length) maos[(Math.random() * maos.length) | 0].click();
+      }
+      // hora de provocar uma queda (antes do próximo lance, com os dois parados e iguais)
+      const lances = lancesDaSumula(H).length;
+      if (emJogo && lances >= proximo && conectado(H) && conectado(C) && sincronizados(H, C) && !ocupado(H) && !ocupado(C) &&
+          !visible(q(H, '#endDlg')) && !visible(q(C, '#endDlg'))) {
+        const ok = await evento(TIPOS[rand(0, TIPOS.length - 1)], P, n);
+        proximo = lancesDaSumula(H).length + rand(6, 14);
+        ultimoProgresso = Date.now();
+        if (!ok) { if (emJogo) { R.iniciadas--; emJogo = false; } break; }
+        continue;
+      }
+      for (const f of [H, C]) {
+        if (visible(q(f, '#endDlg'))) continue;
+        const p = escolher(f);
+        if (p) { if (!emJogo) { emJogo = true; R.iniciadas++; } p.click(); }
+      }
+      if (emJogo && visible(q(H, '#endDlg')) && visible(q(C, '#endDlg'))) {
+        await sleep(150);
+        conferir(H, C, n);
+        R.terminadas++;
+        emJogo = false; quedaNoSorteio = false; proximo = rand(5, 12);
+        if (R.iniciadas >= TOTAL) break;
+        q(H, '#again').click();
+        await waitFor(() => !visible(q(C, '#endDlg')), 15000);
+      }
+      const sig = ['#logBody', '#prompt', '#netStatus'].map(s => txt(H, s) + txt(C, s)).join('|');
+      if (sig !== assinatura) { assinatura = sig; ultimoProgresso = Date.now(); }
+      else if (Date.now() - ultimoProgresso > 30000) {
+        R.travadas++;
+        if (emJogo) { R.iniciadas--; emJogo = false; }
+        log(`TRAVOU dupla ${n}: anfitrião "${txt(H, '#prompt')}" / "${txt(H, '#netStatus')}"; convidado "${txt(C, '#prompt')}" / "${txt(C, '#netStatus')}"`, 'bad');
+        break;
+      }
+      await sleep(50);
+    }
+    box.remove();
+    await sleep(500);
+  }
+}
+
+log(`começando: ${TOTAL} partidas com ${PARES} duplas (celular + computador), com quedas no meio`);
+await Promise.all(Array.from({ length: PARES }, (_, k) => sleep(k * 2000).then(() => dupla(k + 1))));
+R.fim = Date.now();
+resumo();
+log(`FIM: ${R.terminadas} partidas (${R.conferidas} conferidas), ${R.eventos} quedas, ${R.eventosOk} reconectaram, ${R.falhas.length} falhas, ${R.problemas.length} problemas, ${R.travadas} travadas, ${R.erros.length} erros de JavaScript`,
+  R.falhas.length || R.problemas.length || R.travadas || R.erros.length ? 'bad' : 'good');
+})();
+</script>
+</body>
+</html>
